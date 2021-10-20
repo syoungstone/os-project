@@ -3,14 +3,14 @@ import java.util.Queue;
 
 public class Semaphore {
     private int value;
-    private Queue<Process> queue;
+    private Queue<PCB> queue;
 
     public Semaphore() {
         value = 1;
         queue = new LinkedList<>();
     }
 
-    public void wait(Process p) {
+    public void wait(PCB p) {
         value--;
         if (value < 0) {
             queue.add(p);
@@ -21,7 +21,7 @@ public class Semaphore {
     public void signal() {
         value++;
         if (value <= 0) {
-            Process p = queue.remove();
+            PCB p = queue.remove();
             p.wakeup();
         }
     }
