@@ -4,7 +4,7 @@ public class CPU {
 
     private static CPU instance;
 
-    private Process p;
+    private PCB p;
 
     private CPU() {}
 
@@ -15,11 +15,11 @@ public class CPU {
         return instance;
     }
 
-    public Process getProcess() {
+    public PCB getProcess() {
         return p;
     }
 
-    public void setProcess(Process p) {
+    public void setProcess(PCB p) {
         this.p = p;
     }
 
