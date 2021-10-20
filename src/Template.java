@@ -90,6 +90,13 @@ public class Template {
                 sections.add(newSection);
             }
             sc.close();
+            if (sections.size() == 0 ||
+                    sections.get(0) == null ||
+                    sections.get(0).getOperationSets() == null ||
+                    sections.get(0).getOperationSets().size() == 0) {
+                throw new MalformedTemplateException("No operations were processed from template");
+
+            }
             return template;
         } catch (Exception e) {
             if (e instanceof MalformedTemplateException) {
