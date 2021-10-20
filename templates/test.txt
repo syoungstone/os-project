@@ -1,0 +1,7 @@
+FORK            2       3
+IO              4       11
+CRITICAL
+CALCULATE       123     345
+IO              9       12
+CALCULATE       1       5
+/CRITICAL
