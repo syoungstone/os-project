@@ -3,6 +3,7 @@ import java.util.*;
 public class OperatingSystem {
 
     private static final int KERNEL_ID = 0;
+    private static final int TIME_QUANTUM = 10;
     private static final int INITIAL_WAITING_QUEUE_CAPACITY = 10;
 
     private static OperatingSystem instance;
@@ -33,6 +34,7 @@ public class OperatingSystem {
         System.out.println("Loading templates...");
         try {
             templates.addAll(Template.getTemplates());
+            selectTemplates();
             runOS();
         } catch (MalformedTemplateException e) {
             System.out.println(e.getMessage());
@@ -40,13 +42,24 @@ public class OperatingSystem {
         }
     }
 
-    private void runOS() {
+    private void selectTemplates() {
         System.out.println("Operating system is running!");
         System.out.println("Available process templates:");
         int i = 1;
         for (Template t : templates) {
             System.out.println(i + ") " + t.name());
             i++;
+        }
+        // TODO: Select a set number of each template and create processes from them
+        runOS();
+    }
+
+    private void runOS() {
+        while (processes.size() > 0) {
+            // TODO: Call progressOneCycle() on the current process occupying the CPU
+            for (PCB p : waitingQueue) {
+                p.getProcess().progressOneCycle();
+            }
         }
     }
 

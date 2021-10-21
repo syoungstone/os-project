@@ -1,5 +1,3 @@
-import java.util.List;
-
 public class CPU {
 
     private static CPU instance;
@@ -13,10 +11,6 @@ public class CPU {
             instance = new CPU();
         }
         return instance;
-    }
-
-    public PCB getProcess() {
-        return p;
     }
 
     public void setProcess(PCB p) {
