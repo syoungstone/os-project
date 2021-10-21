@@ -14,7 +14,8 @@ public class Semaphore {
         value--;
         if (value < 0) {
             queue.add(p);
-            p.block();
+        } else {
+            p.getProcess().wakeup();
         }
     }
 
@@ -22,7 +23,7 @@ public class Semaphore {
         value++;
         if (value <= 0) {
             PCB p = queue.remove();
-            p.wakeup();
+            p.getProcess().wakeup();
         }
     }
 }
