@@ -1,10 +1,15 @@
-import jdk.nashorn.internal.runtime.ECMAException;
+package Control;
+
+import Processes.MalformedTemplateException;
+import Processes.PCB;
+import Processes.State;
+import Processes.Template;
 
 import java.util.*;
 
 public class OperatingSystem {
 
-    private static final int KERNEL_ID = 0;
+    static final int KERNEL_ID = 0;
 
     private static OperatingSystem instance;
 
@@ -12,9 +17,8 @@ public class OperatingSystem {
 
     private int nextPid;
     private final List<Template> templates;
-    private final Map<Integer,PCB> processes;
+    private final Map<Integer, PCB> processes;
     private final Set<Integer> waiting;
-    private final Scheduler shortTermScheduler;
     private final Semaphore semaphore;
 
     private OperatingSystem() {
@@ -23,7 +27,6 @@ public class OperatingSystem {
         templates = new ArrayList<>();
         processes = new HashMap<>();
         waiting = new HashSet<>();
-        shortTermScheduler = new RRScheduler();
         semaphore = new Semaphore();
     }
 
@@ -66,7 +69,6 @@ public class OperatingSystem {
 
     private void runOS() {
         while (processes.size() > 0) {
-            pidLookup(CPU.getPid()).progressOneCycle();
             CPU.advance();
             for (int pid : waiting) {
                 pidLookup(pid).progressOneCycle();
@@ -92,7 +94,7 @@ public class OperatingSystem {
     }
 
     public void requestCPU(int pid) {
-        shortTermScheduler.add(pid);
+        CPU.request(pid);
         changeState(pid, State.READY);
     }
 
@@ -122,58 +124,15 @@ public class OperatingSystem {
         if (p != null) {
             p.setState(State.EXIT);
         }
-        if (CPU.getPid() == pid) {
-            scheduleNew();
-        }
     }
 
-    private PCB pidLookup(int pid) {
+    PCB pidLookup(int pid) {
         return processes.get(pid);
     }
 
     private void changeState(int pid, State newState) {
         PCB p = pidLookup(pid);
         p.setState(newState);
-    }
-
-    private void scheduleNew() {
-        PCB currentProcess = pidLookup(CPU.getPid());
-        if (currentProcess != null && currentProcess.getState() == State.RUN) {
-            currentProcess.setState(State.READY);
-        }
-        int newPid = shortTermScheduler.remove();
-        PCB newProcess = pidLookup(newPid);
-        newProcess.setState(State.RUN);
-        CPU.setPid(newPid);
-    }
-
-    private class Processor {
-
-        private static final int TIME_QUANTUM = 10;
-
-        private int pid;
-        private int counter;
-
-        Processor() {
-            counter = 0;
-        }
-
-        public void advance() {
-            counter++;
-            if (counter >= TIME_QUANTUM) {
-                scheduleNew();
-                counter = 0;
-            }
-        }
-
-        public int getPid() {
-            return pid;
-        }
-
-        public void setPid(int pid) {
-            this.pid = pid;
-        }
-
     }
 
 }

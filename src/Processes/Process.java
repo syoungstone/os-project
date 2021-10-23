@@ -1,3 +1,7 @@
+package Processes;
+
+import Control.OperatingSystem;
+
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -41,10 +45,10 @@ public class Process {
 
     // Invoked every time we switch to a new set of operations
     private void statusChange(Operation lastOperation) {
-        // Process just created or section just completed
+        // Processes.Process just created or section just completed
         if (currentOpSet == null) {
             currentSection = sections.poll();
-            // Process completed
+            // Processes.Process completed
             if (currentSection == null) {
                 // Request that OS terminate the current process
                 OperatingSystem.getInstance().exit(pid);
@@ -65,7 +69,7 @@ public class Process {
                 }
             }
         }
-        // Operation set just completed
+        // Processes.Operation set just completed
         else {
             if (lastOperation != currentOpSet.getOperation()) {
                 // If current instruction has changed, request new resource

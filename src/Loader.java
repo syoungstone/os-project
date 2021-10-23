@@ -1,3 +1,5 @@
+import Control.OperatingSystem;
+
 public class Loader {
     public static void main(String[] args) {
         OperatingSystem os = OperatingSystem.getInstance();

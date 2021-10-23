@@ -1,3 +1,5 @@
+package Processes;
+
 public class PCB {
 
     private final int pid;
@@ -7,7 +9,7 @@ public class PCB {
     private int priority;
     private State state;
 
-    PCB(Template template, int pid, int parentId) {
+    public PCB(Template template, int pid, int parentId) {
         state = State.NEW;
         this.pid = pid;
         this.parentId = parentId;
