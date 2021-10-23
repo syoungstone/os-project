@@ -18,9 +18,12 @@ public class OperatingSystem {
     private final Processor CPU;
 
     private int nextPid;
+    private long maxCycles;
+    private long elapsedCycles;
     private long startTime = 0;
     private final List<Template> templates;
     private final Map<Integer, PCB> processes;
+    private final List<PCB> terminated;
     private final Set<Integer> waiting;
     private final Set<Integer> doneWaiting;
     private final Semaphore semaphore;
@@ -28,8 +31,10 @@ public class OperatingSystem {
     private OperatingSystem() {
         CPU = new Processor();
         nextPid = KERNEL_ID + 1;
+        elapsedCycles = 0;
         templates = new ArrayList<>();
         processes = new HashMap<>();
+        terminated = new ArrayList<>();
         waiting = new HashSet<>();
         doneWaiting = new HashSet<>();
         semaphore = new Semaphore();
@@ -49,7 +54,7 @@ public class OperatingSystem {
     }
 
     private void selectTemplates() {
-        System.out.println("Available process templates:");
+        System.out.println("\nAvailable process templates:");
         int templateNumber = 1;
         for (Template t : templates) {
             System.out.println(templateNumber + ") " + t.name());
@@ -59,7 +64,7 @@ public class OperatingSystem {
         for (Template t : templates) {
             boolean validInput = false;
             while(!validInput) {
-                System.out.println("Select a number of processes to create using template: " + t.name());
+                System.out.println("\nSelect a number of processes to create using template: " + t.name());
                 try {
                     int numProcesses = Integer.parseInt(sc.nextLine());
                     validInput = true;
@@ -72,14 +77,29 @@ public class OperatingSystem {
                 }
             }
         }
-        System.out.println("All processes successfully created. Launching OS...");
-        runOS();
+        System.out.println("\nAll processes successfully created.");
+        boolean validInput = false;
+        while(!validInput) {
+            System.out.println("\nPlease enter a number of cycles to execute before halting OS,");
+            System.out.println("or enter 'none' to continue until last process terminates:");
+            try {
+                String input = sc.nextLine().trim().toLowerCase();
+                if (input.equals("none")) {
+                    maxCycles = Long.MAX_VALUE;
+                } else {
+                    maxCycles = Integer.parseInt(input);
+                }
+                validInput = true;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please try again.");
+            }
+        }
+        System.out.println("Thank you. Launching OS...");
     }
 
     private void runOS() {
         startTime = System.currentTimeMillis();
-        int cyclesTilNextPrintout = CYCLES_PER_STATUS_PRINTOUT;
-        while (processes.size() > 0) {
+        while (processes.size() > 0 && elapsedCycles < maxCycles) {
             CPU.advance();
             for (int pid : waiting) {
                 pidLookup(pid).progressOneCycle();
@@ -88,26 +108,34 @@ public class OperatingSystem {
              * preventing the modification of HashSet waiting while iterating over it */
             waiting.removeAll(doneWaiting);
             doneWaiting.clear();
-            if (--cyclesTilNextPrintout <= 0) {
+            if (elapsedCycles % CYCLES_PER_STATUS_PRINTOUT == 0) {
                 printStatus();
             }
+            elapsedCycles++;
             sleep();
+        }
+        if (processes.size() == 0) {
+            System.out.println("\nAll processes terminated. Goodbye!");
+        } else {
+            System.out.println("\nTotal cycles elapsed has reached the maximum amount of " + maxCycles + ". Halting.");
         }
     }
 
     private void printStatus() {
-        System.out.println("-------------------------STATUS REPORT-------------------------");
+        System.out.println("\n-------------------------STATUS REPORT-------------------------");
         long msElapsed = System.currentTimeMillis() - startTime;
         int minutesElapsed = (int) (msElapsed / (1000 * 60));
         int secondsElapsed = (int) ((msElapsed % (1000 * 60)) / (1000));
         int millisecondsElapsed = (int) (msElapsed % 1000);
         System.out.print("Time since startup: " + minutesElapsed + " min, " + secondsElapsed + " sec, ");
         System.out.println(millisecondsElapsed + " ms");
+        System.out.println("Cycles elapsed: " + elapsedCycles);
         System.out.println("PID of process in CPU: " + CPU.getCurrentPid());
         System.out.println("Total processes running: " + processes.size());
         System.out.println("Total processes in ready queue: " + CPU.getReadyCount());
         System.out.println("Total processes executing I/O cycles: " + waiting.size());
         System.out.println("Total processes waiting on critical section: " + semaphore.getWaitingCount());
+        System.out.println("Total processes terminated: " + terminated.size());
         System.out.println("---------------------------------------------------------------");
     }
 
@@ -163,7 +191,7 @@ public class OperatingSystem {
     }
 
     public void exit(int pid) {
-        processes.remove(pid);
+        terminated.add(processes.remove(pid));
     }
 
     PCB pidLookup(int pid) {
