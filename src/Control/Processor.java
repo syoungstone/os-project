@@ -27,7 +27,8 @@ class Processor {
     }
 
     public void advance() {
-        if (p == null || p.getState() != State.RUN){
+        if ((p == null && getReadyCount() > 0) ||
+                (p != null && p.getState() != State.RUN)){
             scheduleNew();
         }
         if (p != null) {
@@ -37,12 +38,10 @@ class Processor {
                 scheduleNew();
                 counter = 0;
             }
-        } else {
-            counter = 0;
         }
     }
 
-    public int getCurrent() {
+    public int getCurrentPid() {
         if (p == null) {
             return OperatingSystem.KERNEL_ID;
         } else {

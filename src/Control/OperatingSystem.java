@@ -2,7 +2,6 @@ package Control;
 
 import Processes.MalformedTemplateException;
 import Processes.PCB;
-import Processes.State;
 import Processes.Template;
 
 import java.util.*;
@@ -104,7 +103,7 @@ public class OperatingSystem {
         int millisecondsElapsed = (int) (msElapsed % 1000);
         System.out.print("Time since startup: " + minutesElapsed + " min, " + secondsElapsed + " sec, ");
         System.out.println(millisecondsElapsed + " ms");
-        System.out.println("PID of process in CPU: " + CPU.getCurrent());
+        System.out.println("PID of process in CPU: " + CPU.getCurrentPid());
         System.out.println("Total processes running: " + processes.size());
         System.out.println("Total processes in ready queue: " + CPU.getReadyCount());
         System.out.println("Total processes executing I/O cycles: " + waiting.size());
@@ -164,10 +163,7 @@ public class OperatingSystem {
     }
 
     public void exit(int pid) {
-        PCB p = processes.remove(pid);
-        if (p != null) {
-            p.setState(State.EXIT);
-        }
+        processes.remove(pid);
     }
 
     PCB pidLookup(int pid) {
