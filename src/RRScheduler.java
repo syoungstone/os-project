@@ -4,8 +4,8 @@ public class RRScheduler extends Scheduler {
     private Node head;
     private Node tail;
 
-    public void addProcess(PCB p) {
-        Node n = new Node(p);
+    public void add(int pid) {
+        Node n = new Node(pid);
         if (head == null) {
             head = n;
         } else {
@@ -15,23 +15,23 @@ public class RRScheduler extends Scheduler {
         n.setNext(head);
     }
 
-    public PCB removeProcess() {
+    public int remove() {
         Node n = head;
         head = n.getNext();
         tail.setNext(head);
-        return n.getProcess();
+        return n.getPid();
     }
 
     private static class Node {
-        private final PCB p;
+        private final int pid;
         private Node next;
 
-        Node(PCB p) {
-            this.p = p;
+        Node(int pid) {
+            this.pid = pid;
         }
 
-        public PCB getProcess() {
-            return p;
+        public int getPid() {
+            return pid;
         }
 
         public Node getNext() {

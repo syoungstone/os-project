@@ -22,28 +22,33 @@ public class Process {
             }
             sections.add(pSection);
         }
-        currentSection = sections.poll();
-        currentOpSet = currentSection.getOperationSets().poll();
         criticalSecured = false;
+        statusChange(null);
     }
 
-    // Returns true if process is complete, false otherwise
-    public boolean progressOneCycle() {
+    public void progressOneCycle() {
         currentOpSet.progressOneCycle();
-        Operation completedOperation = currentOpSet.getOperation();
-        if (completedOperation == Operation.FORK) {
+        Operation lastOperation = currentOpSet.getOperation();
+        if (lastOperation == Operation.FORK) {
             OperatingSystem.getInstance().createChildProcess(template, pid);
         }
         // Current set of operations completed
         if (currentOpSet.getCycles() == 0) {
             currentOpSet = currentSection.getOperationSets().poll();
-            // Current section completed
-            if (currentOpSet == null) {
-                currentSection = sections.poll();
-                // Process completed
-                if (currentSection == null) {
-                    return true;
-                }
+            statusChange(lastOperation);
+        }
+    }
+
+    // Invoked every time we switch to a new set of operations
+    private void statusChange(Operation lastOperation) {
+        // Process just created or section just completed
+        if (currentOpSet == null) {
+            currentSection = sections.poll();
+            // Process completed
+            if (currentSection == null) {
+                // Request that OS terminate the current process
+                OperatingSystem.getInstance().exit(pid);
+            } else {
                 currentOpSet = currentSection.getOperationSets().poll();
                 // Any section switch means entering or leaving the critical section
                 if (!currentSection.isCritical()) {
@@ -51,33 +56,30 @@ public class Process {
                     criticalSecured = false;
                     OperatingSystem.getInstance().releaseCriticalSection();
                     // If current instruction has changed, request new resource
-                    if (completedOperation != currentOpSet.getOperation()) {
-                        statusChange();
+                    if (lastOperation != currentOpSet.getOperation()) {
+                        requestResource();
                     }
                 } else {
                     // Request new resource
-                    statusChange();
-                }
-            } else {
-                if (completedOperation != currentOpSet.getOperation()) {
-                    // If current instruction has changed, request new resource
-                    statusChange();
+                    requestResource();
                 }
             }
         }
-        return false;
+        // Operation set just completed
+        else {
+            if (lastOperation != currentOpSet.getOperation()) {
+                // If current instruction has changed, request new resource
+                requestResource();
+            }
+        }
     }
 
     public void wakeup() {
         criticalSecured = true;
-        statusChange();
+        requestResource();
     }
 
-    public int getRemainingCycles() {
-        return currentOpSet.getCycles();
-    }
-
-    private void statusChange() {
+    private void requestResource() {
         if (currentSection.isCritical() && !criticalSecured) {
             OperatingSystem.getInstance().requestCriticalSection(pid);
         } else if (currentOpSet.getOperation() == Operation.CALCULATE) {

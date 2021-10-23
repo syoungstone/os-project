@@ -1,10 +1,10 @@
 public class PCB {
 
-    private int pid;
-    private int parentId;
-    private int priority;
+    private final int pid;
+    private final int parentId;
     private final long startTime;
     private final Process process;
+    private int priority;
     private State state;
 
     PCB(Template template, int pid, int parentId) {
@@ -15,12 +15,20 @@ public class PCB {
         startTime = System.currentTimeMillis();
     }
 
-    public Process getProcess() {
-        return process;
+    public State getState() {
+        return state;
     }
 
     public void setState(State state) {
         this.state = state;
+    }
+
+    public void wakeup() {
+        process.wakeup();
+    }
+
+    public void progressOneCycle() {
+        process.progressOneCycle();
     }
 
 }
