@@ -139,16 +139,16 @@ public class OperatingSystem {
         CPU.request(pid);
     }
 
-    public void requestCriticalSection(int pid) {
-        semaphore.wait(pid);
-    }
-
     public void requestIO(int pid) {
         waiting.add(pid);
     }
 
-    public void completeIO(int pid) {
+    public void releaseIO(int pid) {
         doneWaiting.add(pid);
+    }
+
+    public void requestCriticalSection(int pid) {
+        semaphore.wait(pid);
     }
 
     public void releaseCriticalSection() {

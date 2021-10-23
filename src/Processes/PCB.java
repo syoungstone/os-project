@@ -72,6 +72,7 @@ public class PCB {
                 currentOpSet = currentSection.getOperationSets().poll();
                 // Any section switch means entering or leaving the critical section
                 if (currentSection.isCritical()) {
+                    releaseIO();
                     requestCriticalSection();
                 } else {
                     releaseCriticalSection();
@@ -94,7 +95,7 @@ public class PCB {
 
     private void releaseIO() {
         if (lastCompletedOperation == Operation.IO) {
-            OperatingSystem.getInstance().completeIO(pid);
+            OperatingSystem.getInstance().releaseIO(pid);
         }
     }
 
