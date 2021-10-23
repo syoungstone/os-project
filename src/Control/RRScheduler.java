@@ -24,4 +24,8 @@ public class RRScheduler extends Scheduler {
         }
     }
 
+    public int getReadyCount() {
+        return queue.size();
+    }
+
 }

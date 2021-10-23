@@ -19,10 +19,9 @@ class Processor {
 
     public void request(int pid) {
         if (pid > OperatingSystem.KERNEL_ID) {
+            shortTermScheduler.add(pid);
             if (p == null) {
-                p = OperatingSystem.getInstance().pidLookup(pid);
-            } else {
-                shortTermScheduler.add(pid);
+                scheduleNew();
             }
         }
     }
@@ -43,9 +42,22 @@ class Processor {
         }
     }
 
+    public int getCurrent() {
+        if (p == null) {
+            return OperatingSystem.KERNEL_ID;
+        } else {
+            return p.getPid();
+        }
+    }
+
+    public int getReadyCount() {
+        return shortTermScheduler.getReadyCount();
+    }
+
     private void scheduleNew() {
         if (p != null && p.getState() == State.RUN) {
             p.setState(State.READY);
+            shortTermScheduler.add(p.getPid());
         }
         p = OperatingSystem.getInstance().pidLookup(shortTermScheduler.remove());
         if (p != null) {

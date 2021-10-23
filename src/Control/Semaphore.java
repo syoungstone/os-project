@@ -28,4 +28,8 @@ public class Semaphore {
             OperatingSystem.getInstance().wakeup(pid);
         }
     }
+
+    public int getWaitingCount() {
+        return queue.size();
+    }
 }

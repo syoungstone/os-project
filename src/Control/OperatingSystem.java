@@ -6,19 +6,24 @@ import Processes.State;
 import Processes.Template;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class OperatingSystem {
 
     static final int KERNEL_ID = 0;
+    private static final int CYCLE_DELAY_MS = 2;
+    private static final int CYCLES_PER_STATUS_PRINTOUT = 200;
 
     private static OperatingSystem instance;
 
     private final Processor CPU;
 
     private int nextPid;
+    private long startTime = 0;
     private final List<Template> templates;
     private final Map<Integer, PCB> processes;
     private final Set<Integer> waiting;
+    private final Set<Integer> doneWaiting;
     private final Semaphore semaphore;
 
     private OperatingSystem() {
@@ -27,6 +32,7 @@ public class OperatingSystem {
         templates = new ArrayList<>();
         processes = new HashMap<>();
         waiting = new HashSet<>();
+        doneWaiting = new HashSet<>();
         semaphore = new Semaphore();
     }
 
@@ -52,15 +58,19 @@ public class OperatingSystem {
         }
         Scanner sc = new Scanner(System.in);
         for (Template t : templates) {
-            System.out.println("Select a number of processes to create using template: " + t.name());
-            try {
-                int numProcesses = sc.nextInt();
-                System.out.println("Creating " + numProcesses + " processes from template: " + t.name());
-                for (int i = 0 ; i < numProcesses ; i++) {
-                    createProcess(t);
+            boolean validInput = false;
+            while(!validInput) {
+                System.out.println("Select a number of processes to create using template: " + t.name());
+                try {
+                    int numProcesses = Integer.parseInt(sc.nextLine());
+                    validInput = true;
+                    System.out.println("Creating " + numProcesses + " processes from template: " + t.name());
+                    for (int i = 0; i < numProcesses; i++) {
+                        createProcess(t);
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid input. Please try again.");
                 }
-            } catch (Exception e) {
-                System.out.println("Invalid input. Please try again.");
             }
         }
         System.out.println("All processes successfully created. Launching OS...");
@@ -68,12 +78,44 @@ public class OperatingSystem {
     }
 
     private void runOS() {
+        startTime = System.currentTimeMillis();
+        int cyclesTilNextPrintout = CYCLES_PER_STATUS_PRINTOUT;
         while (processes.size() > 0) {
             CPU.advance();
             for (int pid : waiting) {
                 pidLookup(pid).progressOneCycle();
             }
+            /* Use of HashSet doneWaiting here avoids ConcurrentModificationException by
+             * preventing the modification of HashSet waiting while iterating over it */
+            waiting.removeAll(doneWaiting);
+            doneWaiting.clear();
+            if (--cyclesTilNextPrintout <= 0) {
+                printStatus();
+            }
+            sleep();
         }
+    }
+
+    private void printStatus() {
+        System.out.println("-------------------------STATUS REPORT-------------------------");
+        long msElapsed = System.currentTimeMillis() - startTime;
+        int minutesElapsed = (int) (msElapsed / (1000 * 60));
+        int secondsElapsed = (int) ((msElapsed % (1000 * 60)) / (1000));
+        int millisecondsElapsed = (int) (msElapsed % 1000);
+        System.out.print("Time since startup: " + minutesElapsed + " min, " + secondsElapsed + " sec, ");
+        System.out.println(millisecondsElapsed + " ms");
+        System.out.println("PID of process in CPU: " + CPU.getCurrent());
+        System.out.println("Total processes running: " + processes.size());
+        System.out.println("Total processes in ready queue: " + CPU.getReadyCount());
+        System.out.println("Total processes executing I/O cycles: " + waiting.size());
+        System.out.println("Total processes waiting on critical section: " + semaphore.getWaitingCount());
+        System.out.println("---------------------------------------------------------------");
+    }
+
+    private void sleep() {
+        try {
+            TimeUnit.MILLISECONDS.sleep(CYCLE_DELAY_MS);
+        } catch (InterruptedException ignored) {}
     }
 
     public static OperatingSystem getInstance() {
@@ -91,21 +133,23 @@ public class OperatingSystem {
         int pid = nextPid++;
         PCB p = new PCB(template, pid, parentId);
         processes.put(pid, p);
+        p.activate();
     }
 
     public void requestCPU(int pid) {
         CPU.request(pid);
-        changeState(pid, State.READY);
     }
 
     public void requestCriticalSection(int pid) {
         semaphore.wait(pid);
-        changeState(pid, State.WAIT);
     }
 
     public void requestIO(int pid) {
         waiting.add(pid);
-        changeState(pid, State.WAIT);
+    }
+
+    public void completeIO(int pid) {
+        doneWaiting.add(pid);
     }
 
     public void releaseCriticalSection() {
@@ -128,11 +172,6 @@ public class OperatingSystem {
 
     PCB pidLookup(int pid) {
         return processes.get(pid);
-    }
-
-    private void changeState(int pid, State newState) {
-        PCB p = pidLookup(pid);
-        p.setState(newState);
     }
 
 }

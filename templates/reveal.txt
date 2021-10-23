@@ -1,7 +1,6 @@
 CALCULATE       123     345
-FORK            2       3
 CALCULATE       123     345
-IO              4       11
+IO              564     612
 CALCULATE       123     345
 CRITICAL
 CALCULATE       123     345

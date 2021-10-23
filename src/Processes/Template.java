@@ -12,11 +12,12 @@ public class Template {
 
     private static List<Template> templates;
 
-    private List<Section> sections;
+    private final List<Section> sections;
     private final String name;
 
     private Template(String name) {
         this.name = name;
+        this.sections = new ArrayList<>();
     }
 
     private static void loadTemplates() throws MalformedTemplateException {
@@ -97,7 +98,6 @@ public class Template {
                     sections.get(0).getOperationSets() == null ||
                     sections.get(0).getOperationSets().size() == 0) {
                 throw new MalformedTemplateException("No operations were processed from template");
-
             }
             return template;
         } catch (Exception e) {
@@ -121,11 +121,14 @@ public class Template {
     }
 
     public List<Section> getSections() {
-        if (sections == null) {
-            sections = new ArrayList<>();
-        }
         return sections;
     }
+
+    /* When parsing a template, any number of lines which form a critical or non-critical section
+     * of code become a Section. Each Section contains a boolean specifying whether the section
+     * is critical, as well as a list of OperationSets, each of which is derived from a single
+     * line in the template. Each operation set contains an Operation, as well as the integers
+     * minCycles and maxCycles to use when producing a Process.  */
 
     static class Section {
         private List<OperationSet> operationSets;
