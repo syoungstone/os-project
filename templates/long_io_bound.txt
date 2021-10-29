@@ -1,0 +1,12 @@
+IO              564     612
+CALCULATE       12      34
+IO              564     612
+CALCULATE       12      34
+IO              564     612
+CALCULATE       12      34
+CRITICAL
+IO              564     612
+CALCULATE       12      34
+IO              690     890
+CALCULATE       1       5
+/CRITICAL

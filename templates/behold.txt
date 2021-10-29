@@ -1,4 +1,0 @@
-IO              123     345
-CALCULATE       123     345
-IO              9       12
-CALCULATE       1       5

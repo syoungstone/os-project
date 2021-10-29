@@ -1,0 +1,9 @@
+CALCULATE       300     500
+IO              4       11
+CALCULATE       300     500
+CRITICAL
+CALCULATE       300     500
+IO              9       100
+CALCULATE       300     500
+/CRITICAL
+CALCULATE       549     919

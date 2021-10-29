@@ -1,9 +1,0 @@
-CALCULATE       123     345
-CALCULATE       123     345
-IO              564     612
-CALCULATE       123     345
-CRITICAL
-CALCULATE       123     345
-IO              9       12
-CALCULATE       1       5
-/CRITICAL

@@ -1,0 +1,7 @@
+CALCULATE       18     35
+IO              123     180
+CRITICAL
+CALCULATE       18     35
+IO              66       99
+/CRITICAL
+CALCULATE       13       18
