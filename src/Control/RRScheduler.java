@@ -1,31 +1,36 @@
 package Control;
 
+import Processes.PCB;
+
 import java.util.LinkedList;
 import java.util.Queue;
 
 // Round Robin scheduler employing a circular queue
 public class RRScheduler extends Scheduler {
 
-    private final Queue<Integer> queue;
+    private static final int TIME_QUANTUM = 10;
+
+    private final Queue<PCB> queue;
 
     RRScheduler() {
         queue = new LinkedList<>();
     }
 
-    public void add(int pid) {
-        queue.add(pid);
+    public void add(PCB p) {
+        queue.add(p);
     }
 
-    public int remove() {
-        if (queue.peek() != null) {
-            return queue.poll();
-        } else {
-            return OperatingSystem.KERNEL_ID;
-        }
+    public PCB remove() {
+        return queue.poll();
     }
 
     public int getReadyCount() {
         return queue.size();
+    }
+
+    // Time to schedule a new process if counter has reached the time quantum
+    public boolean scheduleNew(int counter) {
+        return counter >= TIME_QUANTUM;
     }
 
 }

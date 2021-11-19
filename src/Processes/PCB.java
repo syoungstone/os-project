@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-public class PCB {
+public class PCB implements Comparable<PCB> {
 
     private static final int FORK_RANDOM_BOUND = 4;
 
@@ -145,5 +145,16 @@ public class PCB {
         }
     }
 
+    // Compares PCBs by length of CALCULATE bursts for the purpose of the SJFScheduler
+    @Override
+    public int compareTo(PCB o) {
+        return this.getRemainingCalculateCycles().compareTo(o.getRemainingCalculateCycles());
+    }
 
+    private Integer getRemainingCalculateCycles() {
+        if (currentOpSet != null && Operation.CALCULATE.equals(currentOpSet.getOperation())) {
+            return currentOpSet.getCycles();
+        }
+        return 0;
+    }
 }

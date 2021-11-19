@@ -5,22 +5,20 @@ import Processes.State;
 
 class Processor {
 
-    private static final int TIME_QUANTUM = 10;
-
     private final Scheduler shortTermScheduler;
 
     private PCB p;
     private int counter;
 
     Processor() {
-        counter = 0;
         shortTermScheduler = new RRScheduler();
+        counter = 0;
     }
 
-    public void request(int pid) {
-        if (pid > OperatingSystem.KERNEL_ID) {
-            shortTermScheduler.add(pid);
-            if (p == null) {
+    public void request(PCB p) {
+        if (p != null) {
+            shortTermScheduler.add(p);
+            if (this.p == null) {
                 scheduleNew();
             }
         }
@@ -34,9 +32,8 @@ class Processor {
         if (p != null) {
             p.progressOneCycle();
             counter++;
-            if (counter >= TIME_QUANTUM) {
+            if (shortTermScheduler.scheduleNew(counter)) {
                 scheduleNew();
-                counter = 0;
             }
         }
     }
@@ -54,11 +51,12 @@ class Processor {
     }
 
     private void scheduleNew() {
+        counter = 0;
         if (p != null && p.getState() == State.RUN) {
             p.setState(State.READY);
-            shortTermScheduler.add(p.getPid());
+            shortTermScheduler.add(p);
         }
-        p = OperatingSystem.getInstance().pidLookup(shortTermScheduler.remove());
+        p = shortTermScheduler.remove();
         if (p != null) {
             p.setState(State.RUN);
         }

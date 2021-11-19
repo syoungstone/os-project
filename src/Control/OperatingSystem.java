@@ -165,7 +165,7 @@ public class OperatingSystem {
     }
 
     public void requestCPU(int pid) {
-        CPU.request(pid);
+        CPU.request(processes.get(pid));
     }
 
     public void requestIO(int pid) {
