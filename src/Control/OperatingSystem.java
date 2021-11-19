@@ -156,11 +156,12 @@ public class OperatingSystem {
         createChildProcess(template, KERNEL_ID);
     }
 
-    public void createChildProcess(Template template, int parentId) {
+    public int createChildProcess(Template template, int parent) {
         int pid = nextPid++;
-        PCB p = new PCB(template, pid, parentId);
+        PCB p = new PCB(template, pid, parent);
         processes.put(pid, p);
         p.activate();
+        return pid;
     }
 
     public void requestCPU(int pid) {
@@ -191,7 +192,13 @@ public class OperatingSystem {
     }
 
     public void exit(int pid) {
-        terminated.add(processes.remove(pid));
+        PCB p = processes.remove(pid);
+        terminated.add(p);
+
+        // Cascading termination
+        for (int child : p.getChildren()) {
+            exit(child);
+        }
     }
 
     PCB pidLookup(int pid) {

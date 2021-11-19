@@ -2,14 +2,17 @@ package Processes;
 
 import Control.OperatingSystem;
 
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 public class PCB {
 
     private static final int FORK_RANDOM_BOUND = 4;
 
     private final int pid;
-    private final int parentId;
+    private final int parent;
+    private final Set<Integer> children;
     // private final long startTime;
     private final Template template;
     private final Process process;
@@ -20,10 +23,11 @@ public class PCB {
     private Operation lastCompletedOperation;
     private boolean criticalSecured;
 
-    public PCB(Template template, int pid, int parentId) {
+    public PCB(Template template, int pid, int parent) {
         state = State.NEW;
         this.pid = pid;
-        this.parentId = parentId;
+        this.parent = parent;
+        this.children = new HashSet<>();
         this.template = template;
         process = new Process(template);
         // startTime = System.currentTimeMillis();
@@ -48,6 +52,10 @@ public class PCB {
         return pid;
     }
 
+    public Set<Integer> getChildren() {
+        return children;
+    }
+
     public void progressOneCycle() {
         currentOpSet.progressOneCycle();
 
@@ -55,7 +63,7 @@ public class PCB {
         if (currentOpSet.getOperation() == Operation.FORK) {
             Random random = new Random();
             if (random.nextInt(FORK_RANDOM_BOUND) == 0) {
-                OperatingSystem.getInstance().createChildProcess(template, pid);
+                children.add(OperatingSystem.getInstance().createChildProcess(template, pid));
             }
         }
 
