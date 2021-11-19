@@ -191,14 +191,15 @@ public class OperatingSystem {
         }
     }
 
-    public void exit(int pid) {
-        PCB p = processes.remove(pid);
-        terminated.add(p);
-
+    public void exit(int pid, Set<Integer> children) {
         // Cascading termination
-        for (int child : p.getChildren()) {
-            exit(child);
+        for (int child : children) {
+            PCB p = processes.get(child);
+            if (p != null) {
+                p.terminateProcess();
+            }
         }
+        terminated.add(processes.remove(pid));
     }
 
     PCB pidLookup(int pid) {

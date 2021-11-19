@@ -52,10 +52,6 @@ public class PCB {
         return pid;
     }
 
-    public Set<Integer> getChildren() {
-        return children;
-    }
-
     public void progressOneCycle() {
         currentOpSet.progressOneCycle();
 
@@ -102,11 +98,11 @@ public class PCB {
         }
     }
 
-    private void terminateProcess() {
+    public void terminateProcess() {
         state = State.EXIT;
         releaseIO();
         releaseCriticalSection();
-        OperatingSystem.getInstance().exit(pid);
+        OperatingSystem.getInstance().exit(pid, children);
     }
 
     private void releaseIO() {
