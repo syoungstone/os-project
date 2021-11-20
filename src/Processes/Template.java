@@ -138,14 +138,14 @@ public class Template {
             this.critical = critical;
         }
 
-        List<OperationSet> getOperationSets() {
+        synchronized List<OperationSet> getOperationSets() {
             if (operationSets == null) {
                 operationSets = new ArrayList<>();
             }
             return operationSets;
         }
 
-        boolean isCritical() {
+        synchronized boolean isCritical() {
             return critical;
         }
     }
@@ -161,11 +161,11 @@ public class Template {
             this.maxCycles = maxCycles;
         }
 
-        Operation getOperation() {
+        synchronized Operation getOperation() {
             return operation;
         }
 
-        int generateCycleCount() {
+        synchronized int generateCycleCount() {
             Random random = new Random();
             return random.nextInt(maxCycles + 1 - minCycles) + minCycles;
         }
