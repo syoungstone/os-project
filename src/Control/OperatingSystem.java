@@ -184,13 +184,6 @@ public class OperatingSystem {
         semaphore.signal();
     }
 
-    public void wakeup(int pid) {
-        PCB p = pidLookup(pid);
-        if (p != null) {
-            p.wakeup();
-        }
-    }
-
     public void exit(int pid, Set<Integer> children) {
         // Cascading termination
         for (int child : children) {
