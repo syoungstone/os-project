@@ -116,11 +116,11 @@ public class Template {
         return templates;
     }
 
-    public String name() {
+    public synchronized String name() {
         return name;
     }
 
-    public List<Section> getSections() {
+    public synchronized List<Section> getSections() {
         return sections;
     }
 

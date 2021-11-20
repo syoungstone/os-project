@@ -15,7 +15,7 @@ class Processor {
         counter = 0;
     }
 
-    public void request(PCB p) {
+    public synchronized void request(PCB p) {
         if (p != null) {
             shortTermScheduler.add(p);
             if (this.p == null) {

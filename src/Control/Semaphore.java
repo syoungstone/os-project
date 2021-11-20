@@ -12,7 +12,7 @@ public class Semaphore {
         queue = new LinkedList<>();
     }
 
-    public void wait(int pid) {
+    public synchronized void wait(int pid) {
         value--;
         if (value < 0) {
             queue.add(pid);
@@ -21,7 +21,7 @@ public class Semaphore {
         }
     }
 
-    public void signal() {
+    public synchronized void signal() {
         value++;
         if (value <= 0) {
             int pid = queue.remove();
@@ -29,7 +29,7 @@ public class Semaphore {
         }
     }
 
-    public int getWaitingCount() {
+    public synchronized int getWaitingCount() {
         return queue.size();
     }
 }

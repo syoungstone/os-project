@@ -5,6 +5,7 @@ import Processes.PCB;
 import Processes.Template;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class OperatingSystem {
@@ -17,35 +18,34 @@ public class OperatingSystem {
 
     private final Processor CPU;
 
-    private int nextPid;
     private long maxCycles;
     private long elapsedCycles;
     private long startTime = 0;
-    private final List<Template> templates;
     private final Map<Integer, PCB> processes;
     private final List<PCB> terminated;
     private final Set<Integer> waiting;
     private final Set<Integer> doneWaiting;
     private final Semaphore semaphore;
+    private final PidGenerator pidGenerator;
 
     private OperatingSystem() {
         CPU = new Processor();
-        nextPid = KERNEL_ID + 1;
         elapsedCycles = 0;
-        templates = new ArrayList<>();
-        processes = new HashMap<>();
-        terminated = new ArrayList<>();
-        waiting = new HashSet<>();
-        doneWaiting = new HashSet<>();
+        // ConcurrentHashMap class & Collections.synchronized methods for thread safety
+        processes = new ConcurrentHashMap<>();
+        terminated = Collections.synchronizedList(new ArrayList<>());
+        waiting = Collections.synchronizedSet(new HashSet<>());
+        doneWaiting = Collections.synchronizedSet(new HashSet<>());
+        // Semaphore & PidGenerator instance methods are synchronized for thread safety
         semaphore = new Semaphore();
+        pidGenerator = new PidGenerator();
     }
 
     public void boot() {
         System.out.println("Booting up...");
         System.out.println("Loading templates...");
         try {
-            templates.addAll(Template.getTemplates());
-            selectTemplates();
+            selectTemplates(Template.getTemplates());
             runOS();
         } catch (MalformedTemplateException e) {
             System.out.println(e.getMessage());
@@ -53,7 +53,7 @@ public class OperatingSystem {
         }
     }
 
-    private void selectTemplates() {
+    private void selectTemplates(List<Template> templates) {
         System.out.println("\nAvailable process templates:");
         int templateNumber = 1;
         for (Template t : templates) {
@@ -157,7 +157,7 @@ public class OperatingSystem {
     }
 
     public int createChildProcess(Template template, int parent) {
-        int pid = nextPid++;
+        int pid = pidGenerator.getNextPid();
         PCB p = new PCB(template, pid, parent);
         processes.put(pid, p);
         p.activate();
@@ -204,6 +204,19 @@ public class OperatingSystem {
 
     PCB pidLookup(int pid) {
         return processes.get(pid);
+    }
+
+    // Wrapper class to prevent concurrent access of nextPid
+    private static class PidGenerator {
+        private int nextPid;
+
+        PidGenerator() {
+            nextPid = KERNEL_ID + 1;
+        }
+
+        synchronized int getNextPid() {
+            return nextPid++;
+        }
     }
 
 }
