@@ -1,7 +1,8 @@
-CALCULATE       18     35
+MEMORY_REQUIRED_MB: 13
+CALCULATE       18      35
 IO              123     180
 CRITICAL
-CALCULATE       18     35
-IO              66       99
+CALCULATE       18      35
+IO              66      99
 /CRITICAL
-CALCULATE       13       18
+CALCULATE       13      18

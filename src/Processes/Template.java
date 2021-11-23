@@ -7,6 +7,7 @@ import java.util.*;
 public class Template {
 
     private static final String TEMPLATES_DIRECTORY_PATH = "templates";
+    private static final String MEMORY_REQUIRED_STRING = "MEMORY_REQUIRED_MB:";
     private static final String CRITICAL_SECTION_START = "CRITICAL";
     private static final String CRITICAL_SECTION_END = "/CRITICAL";
 
@@ -14,9 +15,11 @@ public class Template {
 
     private final List<Section> sections;
     private final String name;
+    private final int memoryRequiredMB;
 
-    private Template(String name) {
+    private Template(String name, int memoryRequiredMB) {
         this.name = name;
+        this.memoryRequiredMB = memoryRequiredMB;
         this.sections = new ArrayList<>();
     }
 
@@ -38,12 +41,28 @@ public class Template {
 
     private static Template loadTemplate(File file) throws MalformedTemplateException {
         String name = file.getName().split("\\.")[0];
-        Template template = new Template(name);
-        List<Section> sections = template.getSections();
+        Template template;
+        List<Section> sections;
         try {
             Scanner sc = new Scanner(file);
             boolean critical = false;
             List<OperationSet> operationSets = new ArrayList<>();
+            if (sc.hasNextLine()) {
+                String[] contents = sc.nextLine().trim().split("\\s+");
+                if (contents.length == 2 && MEMORY_REQUIRED_STRING.equals(contents[0])) {
+                    try {
+                        int memoryRequiredMB = Integer.parseInt(contents[1]);
+                        template = new Template(name, memoryRequiredMB);
+                        sections = template.getSections();
+                    } catch (Exception e) {
+                        throw new MalformedTemplateException("Memory requirement not an integer");
+                    }
+                } else {
+                    throw new MalformedTemplateException("Missing memory requirements");
+                }
+            } else {
+                throw new MalformedTemplateException("Empty template");
+            }
             while (sc.hasNextLine()) {
                 String[] contents = sc.nextLine().trim().split("\\s+");
                 if (contents.length == 1) {
@@ -114,6 +133,10 @@ public class Template {
             loadTemplates();
         }
         return templates;
+    }
+
+    public synchronized int memoryRequirements() {
+        return memoryRequiredMB;
     }
 
     public synchronized String name() {
