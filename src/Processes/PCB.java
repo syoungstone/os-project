@@ -1,10 +1,10 @@
 package Processes;
 
 import Control.OperatingSystem;
+import Memory.Page;
+import Memory.Word;
 
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public class PCB implements Comparable<PCB> {
 
@@ -13,10 +13,18 @@ public class PCB implements Comparable<PCB> {
     private final int pid;
     private final int parent;
     private final Set<Integer> children;
+
+    private final int memoryRequiredMB;
+    private final int maxLogicalAddress;
+    private final List<Page> pageTable;
+    private final Register register;
+    private Integer lastPageAccessed;
+
     // private final long startTime;
     private final Template template;
     private final Process process;
     // private int priority;
+
     private State state;
     private Process.Section currentSection;
     private Process.OperationSet currentOpSet;
@@ -24,19 +32,31 @@ public class PCB implements Comparable<PCB> {
     private boolean criticalSecured;
 
     public PCB(Template template, int pid, int parent) {
-        state = State.NEW;
+        this.state = State.NEW;
+
         this.pid = pid;
         this.parent = parent;
         this.children = new HashSet<>();
+
+        this.memoryRequiredMB = template.memoryRequirements();
+        this.maxLogicalAddress = 1024 * 1024 * memoryRequiredMB - 1;
+        this.pageTable = new ArrayList<>();
+        this.register = new Register();
+        this.lastPageAccessed = null;
+
         this.template = template;
-        process = new Process(template);
+        this.process = new Process(template);
         // startTime = System.currentTimeMillis();
-        criticalSecured = false;
+        this.criticalSecured = false;
     }
 
     public void activate() {
         if (state == State.NEW) {
-            newOpSet();
+            List<Page> pages = OperatingSystem.getInstance().requestMemory(memoryRequiredMB);
+            if (pages != null) {
+                pageTable.addAll(pages);
+                newOpSet();
+            }
         }
     }
 
@@ -61,6 +81,8 @@ public class PCB implements Comparable<PCB> {
             if (random.nextInt(FORK_RANDOM_BOUND) == 0) {
                 children.add(OperatingSystem.getInstance().createChildProcess(template, pid));
             }
+        } else if (currentOpSet.getOperation() == Operation.CALCULATE) {
+            memoryAccess();
         }
 
         // Current set of operations completed
@@ -68,6 +90,57 @@ public class PCB implements Comparable<PCB> {
             lastCompletedOperation = currentOpSet.getOperation();
             currentOpSet = currentSection.getOperationSets().poll();
             newOpSet();
+        }
+    }
+
+    // Simulates memory access required to perform a calculation
+    private void memoryAccess() {
+        int logicalAddress = generateLogicalAddress();
+        Word contents = read(logicalAddress);
+        register.set(logicalAddress, contents);
+    }
+
+    // Generates a logical address to be read based on a set of rules
+    private int generateLogicalAddress() {
+        Random random = new Random();
+        // Check if a previous memory read has been stored
+        if (register.isSet() && lastPageAccessed != null) {
+            // 50% chance of reading from same logical address as last read
+            // 25% chance of reading from same page as last read
+            if (Math.random() < 0.5) {
+                return register.getLogicalAddress();
+            } else if (Math.random() < 0.5) {
+                // Check whether using the last page
+                if (lastPageAccessed < pageTable.size() - 1) {
+                    return random.nextInt(Page.getSizeBytes())
+                            + pageTable.get(lastPageAccessed).getStartAddress();
+                } else {
+                    // If using the last page, make sure address is valid
+                    int bytesUsedInFinalPage;
+                    if (maxLogicalAddress % Page.getSizeBytes() == 0) {
+                        bytesUsedInFinalPage = Page.getSizeBytes();
+                    } else {
+                        bytesUsedInFinalPage = maxLogicalAddress % Page.getSizeBytes();
+                    }
+                    return random.nextInt(bytesUsedInFinalPage)
+                            + pageTable.get(lastPageAccessed).getStartAddress();
+                }
+            }
+        }
+        return random.nextInt(maxLogicalAddress + 1);
+    }
+
+    private Word read(int logicalAddress) {
+        // Check if contents of logical address already stored in register
+        if (register.isSet() && register.getLogicalAddress() == logicalAddress) {
+            return register.getContents();
+        } else {
+            int pageNumber = logicalAddress / Page.getSizeBytes();
+            int offset = logicalAddress % Page.getSizeBytes();
+            Page page = pageTable.get(pageNumber);
+            Word contents = OperatingSystem.getInstance().read(page, offset);
+            lastPageAccessed = pageNumber;
+            return contents;
         }
     }
 
@@ -103,6 +176,8 @@ public class PCB implements Comparable<PCB> {
         releaseIO();
         releaseCriticalSection();
         OperatingSystem.getInstance().exit(pid, children);
+        OperatingSystem.getInstance().releaseMemory(pageTable);
+        pageTable.clear();
     }
 
     private void releaseIO() {
@@ -156,5 +231,33 @@ public class PCB implements Comparable<PCB> {
             return currentOpSet.getCycles();
         }
         return 0;
+    }
+
+    private static class Register {
+        private int logicalAddress;
+        private Word contents;
+        private boolean set;
+
+        Register() {
+            set = false;
+        }
+
+        public void set(int logicalAddress, Word contents) {
+            this.logicalAddress = logicalAddress;
+            this.contents = contents;
+            this.set = true;
+        }
+
+        public boolean isSet() {
+            return set;
+        }
+
+        public int getLogicalAddress() {
+            return logicalAddress;
+        }
+
+        public Word getContents() {
+            return contents;
+        }
     }
 }

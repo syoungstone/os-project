@@ -1,5 +1,9 @@
 package Control;
 
+import Memory.MainMemory;
+import Memory.Page;
+import Memory.VirtualMemory;
+import Memory.Word;
 import Processes.MalformedTemplateException;
 import Processes.PCB;
 import Processes.Template;
@@ -17,6 +21,8 @@ public class OperatingSystem {
     private static OperatingSystem instance;
 
     private final Processor CPU;
+    private final MainMemory mainMemory;
+    private final VirtualMemory virtualMemory;
 
     private long maxCycles;
     private long elapsedCycles;
@@ -30,6 +36,9 @@ public class OperatingSystem {
 
     private OperatingSystem() {
         CPU = new Processor();
+        mainMemory = MainMemory.getInstance();
+        virtualMemory = VirtualMemory.getInstance();
+
         elapsedCycles = 0;
         // ConcurrentHashMap class & Collections.synchronized methods for thread safety
         processes = new ConcurrentHashMap<>();
@@ -168,6 +177,14 @@ public class OperatingSystem {
         CPU.request(processes.get(pid));
     }
 
+    public List<Page> requestMemory(int requestSizeMB) {
+        return mainMemory.requestMemory(requestSizeMB);
+    }
+
+    public void releaseMemory(List<Page> pages) {
+        mainMemory.releaseMemory(pages);
+    }
+
     public void requestIO(int pid) {
         waiting.add(pid);
     }
@@ -182,6 +199,10 @@ public class OperatingSystem {
 
     public void releaseCriticalSection() {
         semaphore.signal();
+    }
+
+    public Word read(Page page, int offset) {
+        return mainMemory.read(page, offset);
     }
 
     public void exit(int pid, Set<Integer> children) {
