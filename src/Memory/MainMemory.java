@@ -78,6 +78,30 @@ public class MainMemory {
     }
 
     public synchronized Word read(Page page, int offset) {
+        requirePage(page);
+        int frameNumber = page.getFrameNumber();
+        Frame frame = frames.get(frameNumber);
+        int physicalAddress = frame.getStartAddress() + offset;
+        return new Word(physicalAddress);
+    }
+
+    // Since each memory address references a byte, and we want to retrieve a word
+    // consisting of multiple bytes, we need to handle the case where we want a word
+    // that straddles two pages
+    public synchronized Word readAcrossPageBreak(Page page1, int offset, Page page2) {
+        requirePage(page1);
+        requirePage(page2);
+        int frameNumber1 = page1.getFrameNumber();
+        int frameNumber2 = page2.getFrameNumber();
+        Frame frame1 = frames.get(frameNumber1);
+        Frame frame2 = frames.get(frameNumber1);
+        int physicalAddress1 = frame1.getStartAddress() + offset;
+        int sizeFirstChunk = Page.getSizeBytes() - offset;
+        int physicalAddress2 = frame2.getStartAddress();
+        return new Word(physicalAddress1, sizeFirstChunk, physicalAddress2);
+    }
+
+    private void requirePage(Page page) {
         if (!page.isInMemory()) {
             // Page fault
             // First check if free frame in memory
@@ -91,11 +115,6 @@ public class MainMemory {
             swapIn(page);
             VirtualMemory.getInstance().removePage(page);
         }
-
-        int frameNumber = page.getFrameNumber();
-        Frame frame = frames.get(frameNumber);
-        int physicalAddress = frame.getStartAddress() + offset;
-        return new Word(physicalAddress);
     }
 
     private void swapIn(Page page) {

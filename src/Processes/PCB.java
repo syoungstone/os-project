@@ -15,7 +15,7 @@ public class PCB implements Comparable<PCB> {
     private final Set<Integer> children;
 
     private final int memoryRequiredMB;
-    private final int maxLogicalAddress;
+    private final int memoryRequiredBytes;
     private final List<Page> pageTable;
     private final Register register;
     private Integer lastPageAccessed;
@@ -39,7 +39,7 @@ public class PCB implements Comparable<PCB> {
         this.children = new HashSet<>();
 
         this.memoryRequiredMB = template.memoryRequirements();
-        this.maxLogicalAddress = 1024 * 1024 * memoryRequiredMB - 1;
+        this.memoryRequiredBytes = 1024 * 1024 * memoryRequiredMB;
         this.pageTable = new ArrayList<>();
         this.register = new Register();
         this.lastPageAccessed = null;
@@ -117,17 +117,17 @@ public class PCB implements Comparable<PCB> {
                 } else {
                     // If using the last page, make sure address is valid
                     int bytesUsedInFinalPage;
-                    if (maxLogicalAddress % Page.getSizeBytes() == 0) {
+                    if (memoryRequiredBytes % Page.getSizeBytes() == 0) {
                         bytesUsedInFinalPage = Page.getSizeBytes();
                     } else {
-                        bytesUsedInFinalPage = maxLogicalAddress % Page.getSizeBytes();
+                        bytesUsedInFinalPage = memoryRequiredBytes % Page.getSizeBytes();
                     }
-                    return random.nextInt(bytesUsedInFinalPage)
+                    return random.nextInt(bytesUsedInFinalPage - Word.WORD_SIZE_IN_BYTES + 1)
                             + pageTable.get(lastPageAccessed).getStartAddress();
                 }
             }
         }
-        return random.nextInt(maxLogicalAddress + 1);
+        return random.nextInt(memoryRequiredBytes - Word.WORD_SIZE_IN_BYTES + 1);
     }
 
     private Word read(int logicalAddress) {
@@ -137,8 +137,17 @@ public class PCB implements Comparable<PCB> {
         } else {
             int pageNumber = logicalAddress / Page.getSizeBytes();
             int offset = logicalAddress % Page.getSizeBytes();
-            Page page = pageTable.get(pageNumber);
-            Word contents = OperatingSystem.getInstance().read(page, offset);
+            Word contents;
+
+            // Check if desired word straddles two pages
+            if (offset > Page.getSizeBytes() - Word.WORD_SIZE_IN_BYTES) {
+                Page page1 = pageTable.get(pageNumber);
+                Page page2 = pageTable.get(pageNumber + 1);
+                contents = OperatingSystem.getInstance().readAcrossPageBreak(page1, offset, page2);
+            } else {
+                Page page = pageTable.get(pageNumber);
+                contents = OperatingSystem.getInstance().read(page, offset);
+            }
             lastPageAccessed = pageNumber;
             return contents;
         }

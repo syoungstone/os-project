@@ -201,6 +201,10 @@ public class OperatingSystem {
         semaphore.signal();
     }
 
+    public Word readAcrossPageBreak(Page page1, int offset, Page page2) {
+        return mainMemory.readAcrossPageBreak(page1, offset, page2);
+    }
+
     public Word read(Page page, int offset) {
         return mainMemory.read(page, offset);
     }
