@@ -206,13 +206,13 @@ public class OperatingSystem {
     }
 
     public void exit(int pid, Set<Integer> children) {
-        // Cascading termination
-        for (int child : children) {
-            PCB p = processes.get(child);
-            if (p != null) {
-                p.terminateProcess();
-            }
-        }
+//        // Cascading termination
+//        for (int child : children) {
+//            PCB p = processes.get(child);
+//            if (p != null) {
+//                p.terminateProcess();
+//            }
+//        }
         terminated.add(processes.remove(pid));
     }
 

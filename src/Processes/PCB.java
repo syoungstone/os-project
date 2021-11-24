@@ -211,7 +211,8 @@ public class PCB implements Comparable<PCB> {
     }
 
     private void requestResource() {
-        if (currentOpSet.getOperation() == Operation.CALCULATE) {
+        if (currentOpSet.getOperation() == Operation.CALCULATE
+                || currentOpSet.getOperation() == Operation.FORK) {
             state = State.READY;
             OperatingSystem.getInstance().requestCPU(pid);
         } else if (currentOpSet.getOperation() == Operation.IO) {

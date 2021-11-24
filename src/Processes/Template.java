@@ -68,6 +68,7 @@ public class Template {
                 if (contents.length == 1) {
                     boolean isStartCritical = CRITICAL_SECTION_START.equals(contents[0]);
                     boolean isEndCritical = CRITICAL_SECTION_END.equals(contents[0]);
+                    boolean isFork = Operation.FORK == Operation.read(contents[0]);
                     if (isStartCritical || isEndCritical) {
                         if (critical && isStartCritical) {
                             throw new MalformedTemplateException("New CS formed before ending current CS");
@@ -82,6 +83,8 @@ public class Template {
                             operationSets.clear();
                         }
                         critical = !critical;
+                    } else if (isFork) {
+                        operationSets.add(new OperationSet(Operation.FORK));
                     } else {
                         throw new MalformedTemplateException("Unrecognized command");
                     }
@@ -89,6 +92,8 @@ public class Template {
                     Operation operation = Operation.read(contents[0]);
                     if (operation == null) {
                         throw new MalformedTemplateException("Unrecognized operation");
+                    } else if (operation == Operation.FORK) {
+                        throw new MalformedTemplateException("FORK command should stand alone");
                     }
                     try {
                         int min = Integer.parseInt(contents[1]);
@@ -178,6 +183,12 @@ public class Template {
         private final int minCycles;
         private final int maxCycles;
 
+        OperationSet(Operation operation) {
+            this.operation = operation;
+            this.minCycles = 1;
+            this.maxCycles = 1;
+        }
+
         OperationSet(Operation operation, int minCycles, int maxCycles) {
             this.operation = operation;
             this.minCycles = minCycles;
@@ -189,6 +200,9 @@ public class Template {
         }
 
         synchronized int generateCycleCount() {
+            if (operation == Operation.FORK) {
+                return 1;
+            }
             Random random = new Random();
             return random.nextInt(maxCycles + 1 - minCycles) + minCycles;
         }

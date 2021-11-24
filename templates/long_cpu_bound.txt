@@ -1,8 +1,10 @@
 MEMORY_REQUIRED_MB: 13
 CALCULATE       300     500
+FORK
 IO              4       11
 CALCULATE       300     500
 CRITICAL
+FORK
 CALCULATE       300     500
 IO              9       100
 CALCULATE       300     500

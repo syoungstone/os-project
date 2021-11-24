@@ -2,6 +2,7 @@ MEMORY_REQUIRED_MB: 13
 IO              564     612
 CALCULATE       12      34
 IO              564     612
+FORK
 CALCULATE       12      34
 IO              564     612
 CALCULATE       12      34

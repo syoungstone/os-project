@@ -1,4 +1,5 @@
 MEMORY_REQUIRED_MB: 13
+FORK
 CALCULATE       100     200
 IO              18      35
 CALCULATE       100     200

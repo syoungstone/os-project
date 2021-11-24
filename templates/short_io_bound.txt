@@ -5,4 +5,5 @@ CRITICAL
 CALCULATE       18      35
 IO              66      99
 /CRITICAL
+FORK
 CALCULATE       13      18
