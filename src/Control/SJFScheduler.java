@@ -16,20 +16,20 @@ public class SJFScheduler extends Scheduler {
         queue = new PriorityQueue<>();
     }
 
-    public void add(PCB p) {
+    public synchronized void add(PCB p) {
         queue.add(p);
     }
 
-    public PCB remove() {
+    public synchronized PCB remove() {
         return queue.poll();
     }
 
-    public int getReadyCount() {
+    public synchronized int getReadyCount() {
         return queue.size();
     }
 
     // No time quantum, so no need to schedule new process after a set number of cycles
-    public boolean scheduleNew(int counter) {
+    public synchronized boolean scheduleNew(int counter) {
         return false;
     }
 

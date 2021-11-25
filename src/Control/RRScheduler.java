@@ -16,20 +16,20 @@ public class RRScheduler extends Scheduler {
         queue = new LinkedList<>();
     }
 
-    public void add(PCB p) {
+    public synchronized void add(PCB p) {
         queue.add(p);
     }
 
-    public PCB remove() {
+    public synchronized PCB remove() {
         return queue.poll();
     }
 
-    public int getReadyCount() {
+    public synchronized int getReadyCount() {
         return queue.size();
     }
 
     // Time to schedule a new process if counter has reached the time quantum
-    public boolean scheduleNew(int counter) {
+    public synchronized boolean scheduleNew(int counter) {
         return counter >= TIME_QUANTUM;
     }
 

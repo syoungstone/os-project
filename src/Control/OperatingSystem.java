@@ -20,6 +20,7 @@ public class OperatingSystem {
 
     private static OperatingSystem instance;
 
+    private final Object threadCoordinator;
     private final Processor CPU;
     private final MainMemory mainMemory;
     private final VirtualMemory virtualMemory;
@@ -30,12 +31,12 @@ public class OperatingSystem {
     private final Map<Integer, PCB> processes;
     private final List<PCB> terminated;
     private final Set<Integer> waiting;
-    private final Set<Integer> doneWaiting;
     private final Semaphore semaphore;
     private final PidGenerator pidGenerator;
 
     private OperatingSystem() {
-        CPU = new Processor();
+        threadCoordinator = new Object();
+        CPU = new Processor(new RRScheduler(), threadCoordinator);
         mainMemory = MainMemory.getInstance();
         virtualMemory = VirtualMemory.getInstance();
 
@@ -44,7 +45,6 @@ public class OperatingSystem {
         processes = new ConcurrentHashMap<>();
         terminated = Collections.synchronizedList(new ArrayList<>());
         waiting = Collections.synchronizedSet(new HashSet<>());
-        doneWaiting = Collections.synchronizedSet(new HashSet<>());
         // Semaphore & PidGenerator instance methods are synchronized for thread safety
         semaphore = new Semaphore();
         pidGenerator = new PidGenerator();
@@ -107,22 +107,24 @@ public class OperatingSystem {
     }
 
     private void runOS() {
+        CPU.start();
         startTime = System.currentTimeMillis();
         while (processes.size() > 0 && elapsedCycles < maxCycles) {
-            CPU.advance();
-            for (int pid : waiting) {
+            // Notify waiting CPU threads to start a new cycle
+            synchronized (threadCoordinator) {
+                threadCoordinator.notifyAll();
+            }
+            // Progress all processes receiving I/O
+            for (int pid : new HashSet<>(waiting)) {
                 pidLookup(pid).progressOneCycle();
             }
-            /* Use of HashSet doneWaiting here avoids ConcurrentModificationException by
-             * preventing the modification of HashSet waiting while iterating over it */
-            waiting.removeAll(doneWaiting);
-            doneWaiting.clear();
             if (elapsedCycles % CYCLES_PER_STATUS_PRINTOUT == 0) {
                 printStatus();
             }
             elapsedCycles++;
             sleep();
         }
+        CPU.stop();
         if (processes.size() == 0) {
             System.out.println("\nAll processes terminated. Goodbye!");
         } else {
@@ -139,7 +141,7 @@ public class OperatingSystem {
         System.out.print("Time since startup: " + minutesElapsed + " min, " + secondsElapsed + " sec, ");
         System.out.println(millisecondsElapsed + " ms");
         System.out.println("Cycles elapsed: " + elapsedCycles);
-        System.out.println("PID of process in CPU: " + CPU.getCurrentPid());
+        System.out.println("PIDs of processes in CPU: " + CPU.getCurrentPids());
         System.out.println("Total processes running: " + processes.size());
         System.out.println("Total processes in ready queue: " + CPU.getReadyCount());
         System.out.println("Total processes executing I/O cycles: " + waiting.size());
@@ -190,7 +192,7 @@ public class OperatingSystem {
     }
 
     public void releaseIO(int pid) {
-        doneWaiting.add(pid);
+        waiting.remove(pid);
     }
 
     public void requestCriticalSection(int pid) {
