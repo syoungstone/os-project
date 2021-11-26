@@ -29,7 +29,7 @@ public class SJFScheduler extends Scheduler {
     }
 
     // No time quantum, so no need to schedule new process after a set number of cycles
-    public synchronized boolean scheduleNew(int counter) {
+    public boolean scheduleNew(int counter) {
         return false;
     }
 

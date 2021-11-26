@@ -213,7 +213,11 @@ public class PCB implements Comparable<PCB> {
     }
 
     private void conditionalRequestResource() {
-        if (lastCompletedOperation != currentOpSet.getOperation()) {
+        if (lastCompletedOperation == null
+                || (lastCompletedOperation == Operation.IO
+                        && currentOpSet.getOperation() != Operation.IO)
+                || (lastCompletedOperation != Operation.IO
+                        && currentOpSet.getOperation() == Operation.IO)) {
             releaseIO();
             requestResource();
         }

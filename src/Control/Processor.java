@@ -11,10 +11,10 @@ class Processor {
     private final Scheduler shortTermScheduler;
     private final Core[] cores;
 
-    Processor(Scheduler scheduler, Object threadCoordinator) {
-        this.threadCoordinator = threadCoordinator;
-        this.shortTermScheduler = scheduler;
-        this.cores = new Core[NUM_CORES];
+    Processor(Scheduler scheduler) {
+        threadCoordinator = new Object();
+        shortTermScheduler = scheduler;
+        cores = new Core[NUM_CORES];
         for (int i = 0 ; i < NUM_CORES ; i++) {
             cores[i] = new Core();
         }
@@ -26,10 +26,25 @@ class Processor {
         }
     }
 
+    public void advance() {
+        // Notify waiting CPU threads to start a new cycle
+        synchronized (threadCoordinator) {
+            threadCoordinator.notifyAll();
+        }
+    }
+
     public void stop() {
         for (Core core : cores) {
             core.stop();
         }
+    }
+
+    public boolean cycleFinished() {
+        boolean finished = true;
+        for (Core core : cores) {
+            finished = finished && core.isWaiting();
+        }
+        return finished;
     }
 
     public void request(PCB p) {
@@ -71,6 +86,10 @@ class Processor {
             instantiateThread();
         }
 
+        boolean isWaiting() {
+            return thread.getState() == Thread.State.WAITING;
+        }
+
         int getCurrentPid() {
             if (p == null) {
                 return OperatingSystem.KERNEL_ID;
@@ -83,13 +102,13 @@ class Processor {
             thread = new Thread(() -> {
                 boolean run = true;
                 while (run) {
-                    advance();
-                    synchronized (threadCoordinator) {
-                        try {
+                    try {
+                        synchronized (threadCoordinator) {
                             threadCoordinator.wait();
-                        } catch (InterruptedException e) {
-                            run = false;
                         }
+                        advance();
+                    } catch (InterruptedException e) {
+                        run = false;
                     }
                 }
             });
@@ -115,7 +134,7 @@ class Processor {
             if (p != null) {
                 p.progressOneCycle();
                 counter++;
-                if (shortTermScheduler.scheduleNew(counter)) {
+                if (shortTermScheduler.scheduleNew(counter) || p.getState() != State.RUN) {
                     scheduleNew();
                 }
             }

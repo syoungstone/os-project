@@ -20,8 +20,8 @@ public class OperatingSystem {
 
     private static OperatingSystem instance;
 
-    private final Object threadCoordinator;
     private final Processor CPU;
+    private final IoModule ioModule;
     private final MainMemory mainMemory;
     private final VirtualMemory virtualMemory;
 
@@ -35,8 +35,8 @@ public class OperatingSystem {
     private final PidGenerator pidGenerator;
 
     private OperatingSystem() {
-        threadCoordinator = new Object();
-        CPU = new Processor(new RRScheduler(), threadCoordinator);
+        CPU = new Processor(new RRScheduler());
+        ioModule = new IoModule();
         mainMemory = MainMemory.getInstance();
         virtualMemory = VirtualMemory.getInstance();
 
@@ -107,23 +107,21 @@ public class OperatingSystem {
     }
 
     private void runOS() {
+        ioModule.start();
         CPU.start();
         startTime = System.currentTimeMillis();
         while (processes.size() > 0 && elapsedCycles < maxCycles) {
-            // Notify waiting CPU threads to start a new cycle
-            synchronized (threadCoordinator) {
-                threadCoordinator.notifyAll();
-            }
-            // Progress all processes receiving I/O
-            for (int pid : new HashSet<>(waiting)) {
-                pidLookup(pid).progressOneCycle();
-            }
+            ioModule.advance();
+            CPU.advance();
+            // Busy wait until all threads have finished
+            while (!(CPU.cycleFinished() && ioModule.cycleFinished()));
             if (elapsedCycles % CYCLES_PER_STATUS_PRINTOUT == 0) {
                 printStatus();
             }
             elapsedCycles++;
             sleep();
         }
+        ioModule.stop();
         CPU.stop();
         if (processes.size() == 0) {
             System.out.println("\nAll processes terminated. Goodbye!");
@@ -237,6 +235,62 @@ public class OperatingSystem {
         synchronized int getNextPid() {
             return nextPid++;
         }
+    }
+
+    private class IoModule {
+
+        private Thread ioThread;
+        private final Object threadCoordinator;
+        private final Set<Integer> waitingThisCycle;
+
+        IoModule() {
+            instantiateThread();
+            threadCoordinator = new Object();
+            waitingThisCycle = new HashSet<>();
+        }
+
+        void start() {
+            ioThread.start();
+        }
+
+        void advance() {
+            waitingThisCycle.addAll(waiting);
+            // Notify waiting ioThread to start a new cycle
+            synchronized (threadCoordinator) {
+                threadCoordinator.notifyAll();
+            }
+        }
+
+        void stop() {
+            ioThread.interrupt();
+            instantiateThread();
+        }
+
+        boolean cycleFinished() {
+            return ioThread.getState() == Thread.State.WAITING;
+        }
+
+        private void instantiateThread() {
+            ioThread = new Thread(() -> {
+                boolean run = true;
+                while (run) {
+                    try {
+                        // Wait for signal to begin cycle
+                        synchronized (threadCoordinator) {
+                            threadCoordinator.wait();
+                        }
+                        // Progress all processes receiving I/O
+                        for (int pid : waitingThisCycle) {
+                            pidLookup(pid).progressOneCycle();
+                        }
+                        waitingThisCycle.clear();
+                    } catch (InterruptedException e) {
+                        run = false;
+                    }
+                }
+            });
+        }
+
     }
 
 }

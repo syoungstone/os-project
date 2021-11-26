@@ -29,7 +29,7 @@ public class RRScheduler extends Scheduler {
     }
 
     // Time to schedule a new process if counter has reached the time quantum
-    public synchronized boolean scheduleNew(int counter) {
+    public boolean scheduleNew(int counter) {
         return counter >= TIME_QUANTUM;
     }
 
