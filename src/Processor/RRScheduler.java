@@ -1,4 +1,4 @@
-package Control;
+package Processor;
 
 import Processes.PCB;
 
@@ -6,7 +6,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 // Round Robin scheduler employing a circular queue
-public class RRScheduler extends Scheduler {
+public class RRScheduler extends ShortTermScheduler {
 
     private static final int TIME_QUANTUM = 10;
 

@@ -1,28 +1,29 @@
-package Control;
+package Processor;
 
+import Control.OperatingSystem;
 import Processes.PCB;
 import Processes.State;
 
-class Processor {
+public class Core {
 
-    private static final int NUM_CORES = 4;
+    private static final int NUM_HARDWARE_THREADS = 4;
 
     private final Object threadCoordinator;
-    private final Scheduler shortTermScheduler;
-    private final Core[] cores;
+    private final ShortTermScheduler shortTermScheduler;
+    private final HardwareThread[] hardwareThreads;
 
-    Processor(Scheduler scheduler) {
+    Core(ShortTermScheduler scheduler) {
         threadCoordinator = new Object();
         shortTermScheduler = scheduler;
-        cores = new Core[NUM_CORES];
-        for (int i = 0 ; i < NUM_CORES ; i++) {
-            cores[i] = new Core();
+        hardwareThreads = new HardwareThread[NUM_HARDWARE_THREADS];
+        for (int i = 0; i < NUM_HARDWARE_THREADS; i++) {
+            hardwareThreads[i] = new HardwareThread();
         }
     }
 
     public void start() {
-        for (Core core : cores) {
-            core.start();
+        for (HardwareThread hardwareThread : hardwareThreads) {
+            hardwareThread.start();
         }
     }
 
@@ -34,15 +35,15 @@ class Processor {
     }
 
     public void stop() {
-        for (Core core : cores) {
-            core.stop();
+        for (HardwareThread hardwareThread : hardwareThreads) {
+            hardwareThread.stop();
         }
     }
 
     public boolean cycleFinished() {
         boolean finished = true;
-        for (Core core : cores) {
-            finished = finished && core.isWaiting();
+        for (HardwareThread hardwareThread : hardwareThreads) {
+            finished = finished && hardwareThread.isWaiting();
         }
         return finished;
     }
@@ -57,22 +58,22 @@ class Processor {
 
     public String getCurrentPids() {
         StringBuilder pids = new StringBuilder();
-        for (int i = 0 ; i < cores.length ; i++) {
-            pids.append(cores[i].getCurrentPid());
-            if (i < cores.length - 1) {
+        for (int i = 0; i < hardwareThreads.length ; i++) {
+            pids.append(hardwareThreads[i].getCurrentPid());
+            if (i < hardwareThreads.length - 1) {
                 pids.append(", ");
             }
         }
         return pids.toString();
     }
 
-    private class Core {
+    private class HardwareThread {
 
         private PCB p;
         private int counter;
         private Thread thread;
 
-        Core() {
+        HardwareThread() {
             counter = 0;
             instantiateThread();
         }
@@ -141,5 +142,5 @@ class Processor {
         }
 
     }
-
+    
 }

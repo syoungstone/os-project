@@ -1,4 +1,4 @@
-package Control;
+package Processor;
 
 import Processes.PCB;
 
@@ -6,7 +6,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 
 // Shortest Job First scheduler using the number of CALCULATE operations in a burst
-public class SJFScheduler extends Scheduler {
+public class SJFScheduler extends ShortTermScheduler {
 
     private final Queue<PCB> queue;
 

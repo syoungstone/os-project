@@ -1,8 +1,8 @@
-package Control;
+package Processor;
 
 import Processes.PCB;
 
-public abstract class Scheduler {
+public abstract class ShortTermScheduler {
     public abstract void add(PCB p);
     public abstract PCB remove();
     public abstract int getReadyCount();

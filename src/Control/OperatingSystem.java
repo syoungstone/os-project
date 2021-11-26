@@ -7,6 +7,7 @@ import Memory.Word;
 import Processes.MalformedTemplateException;
 import Processes.PCB;
 import Processes.Template;
+import Processor.Processor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,13 +15,13 @@ import java.util.concurrent.TimeUnit;
 
 public class OperatingSystem {
 
-    static final int KERNEL_ID = 0;
+    public static final int KERNEL_ID = 0;
     private static final int CYCLE_DELAY_MS = 2;
     private static final int CYCLES_PER_STATUS_PRINTOUT = 200;
 
     private static OperatingSystem instance;
 
-    private final Processor CPU;
+    private final Processor processor;
     private final IoModule ioModule;
     private final MainMemory mainMemory;
     private final VirtualMemory virtualMemory;
@@ -35,7 +36,7 @@ public class OperatingSystem {
     private final PidGenerator pidGenerator;
 
     private OperatingSystem() {
-        CPU = new Processor(new RRScheduler());
+        processor = new Processor();
         ioModule = new IoModule();
         mainMemory = MainMemory.getInstance();
         virtualMemory = VirtualMemory.getInstance();
@@ -108,13 +109,13 @@ public class OperatingSystem {
 
     private void runOS() {
         ioModule.start();
-        CPU.start();
+        processor.start();
         startTime = System.currentTimeMillis();
         while (processes.size() > 0 && elapsedCycles < maxCycles) {
             ioModule.advance();
-            CPU.advance();
+            processor.advance();
             // Busy wait until all threads have finished
-            while (!(CPU.cycleFinished() && ioModule.cycleFinished()));
+            while (!(processor.cycleFinished() && ioModule.cycleFinished()));
             if (elapsedCycles % CYCLES_PER_STATUS_PRINTOUT == 0) {
                 printStatus();
             }
@@ -122,7 +123,7 @@ public class OperatingSystem {
             sleep();
         }
         ioModule.stop();
-        CPU.stop();
+        processor.stop();
         if (processes.size() == 0) {
             System.out.println("\nAll processes terminated. Goodbye!");
         } else {
@@ -139,9 +140,9 @@ public class OperatingSystem {
         System.out.print("Time since startup: " + minutesElapsed + " min, " + secondsElapsed + " sec, ");
         System.out.println(millisecondsElapsed + " ms");
         System.out.println("Cycles elapsed: " + elapsedCycles);
-        System.out.println("PIDs of processes in CPU: " + CPU.getCurrentPids());
+        System.out.println("PIDs of processes in CPU: " + processor.getCurrentPids());
         System.out.println("Total processes running: " + processes.size());
-        System.out.println("Total processes in ready queue: " + CPU.getReadyCount());
+        System.out.println("Total processes in ready queue: " + processor.getReadyCount());
         System.out.println("Total processes executing I/O cycles: " + waiting.size());
         System.out.println("Total processes waiting on critical section: " + semaphore.getWaitingCount());
         System.out.println("Total processes terminated: " + terminated.size());
@@ -174,7 +175,7 @@ public class OperatingSystem {
     }
 
     public void requestCPU(int pid) {
-        CPU.request(processes.get(pid));
+        processor.request(processes.get(pid));
     }
 
     public List<Page> requestMemory(int requestSizeMB) {
