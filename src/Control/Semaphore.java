@@ -31,6 +31,13 @@ public class Semaphore {
         }
     }
 
+    // In case a process is terminated early by its parent
+    public synchronized void removeFromQueue(int pid) {
+        if (queue.remove(pid)) {
+            value++;
+        }
+    }
+
     public synchronized int getWaitingCount() {
         return queue.size();
     }

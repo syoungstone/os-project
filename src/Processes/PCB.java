@@ -31,7 +31,13 @@ public class PCB implements Comparable<PCB> {
     private Operation lastCompletedOperation;
     private boolean criticalSecured;
 
-    public PCB(Template template, int pid, int parent) {
+    // For a process created at startup
+    public PCB(Template template, int pid) {
+        this(template, new Process(template), pid, OperatingSystem.KERNEL_ID);
+    }
+
+    // For a process created by a FORK
+    public PCB(Template template, Process process, int pid, int parent) {
         this.state = State.NEW;
 
         this.pid = pid;
@@ -45,7 +51,7 @@ public class PCB implements Comparable<PCB> {
         this.lastPageAccessed = null;
 
         this.template = template;
-        this.process = new Process(template);
+        this.process = process;
         // startTime = System.currentTimeMillis();
         this.criticalSecured = false;
     }
@@ -72,15 +78,11 @@ public class PCB implements Comparable<PCB> {
         return pid;
     }
 
-    public void progressOneCycle() {
+    public synchronized void progressOneCycle() {
         currentOpSet.progressOneCycle();
 
-        // FORK operation results in a 1/FORK_RANDOM_BOUND chance of a child process being created
         if (currentOpSet.getOperation() == Operation.FORK) {
-            Random random = new Random();
-            if (random.nextInt(FORK_RANDOM_BOUND) == 0) {
-                children.add(OperatingSystem.getInstance().createChildProcess(template, pid));
-            }
+            fork();
         } else if (currentOpSet.getOperation() == Operation.CALCULATE) {
             memoryAccess();
         }
@@ -90,6 +92,16 @@ public class PCB implements Comparable<PCB> {
             lastCompletedOperation = currentOpSet.getOperation();
             currentOpSet = currentSection.getOperationSets().poll();
             newOpSet();
+        }
+    }
+
+    // FORK operation results in a 1/FORK_RANDOM_BOUND chance of a child process being created
+    private void fork() {
+        Random random = new Random();
+        if (random.nextInt(FORK_RANDOM_BOUND) == 0) {
+            Process childProcess = new Process(process, currentSection);
+            int childPid = OperatingSystem.getInstance().createChildProcess(template, pid, childProcess);
+            children.add(childPid);
         }
     }
 
@@ -180,13 +192,14 @@ public class PCB implements Comparable<PCB> {
         }
     }
 
-    public void terminateProcess() {
+    public synchronized void terminateProcess() {
         state = State.EXIT;
-        releaseIO();
+        OperatingSystem.getInstance().removeFromSemaphore(pid);
         releaseCriticalSection();
-        OperatingSystem.getInstance().exit(pid, children);
+        OperatingSystem.getInstance().releaseIO(pid);
         OperatingSystem.getInstance().releaseMemory(pageTable);
         pageTable.clear();
+        OperatingSystem.getInstance().exit(pid, children);
     }
 
     private void releaseIO() {
@@ -207,7 +220,7 @@ public class PCB implements Comparable<PCB> {
         }
     }
 
-    public void wakeup() {
+    public synchronized void wakeup() {
         criticalSecured = true;
         requestResource();
     }
@@ -240,7 +253,7 @@ public class PCB implements Comparable<PCB> {
         return this.getRemainingCalculateCycles().compareTo(o.getRemainingCalculateCycles());
     }
 
-    private Integer getRemainingCalculateCycles() {
+    private synchronized Integer getRemainingCalculateCycles() {
         if (currentOpSet != null && Operation.CALCULATE.equals(currentOpSet.getOperation())) {
             return currentOpSet.getCycles();
         }

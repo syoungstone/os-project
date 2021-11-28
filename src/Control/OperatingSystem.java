@@ -6,6 +6,7 @@ import Memory.VirtualMemory;
 import Memory.Word;
 import Processes.MalformedTemplateException;
 import Processes.PCB;
+import Processes.Process;
 import Processes.Template;
 import Processor.Processor;
 
@@ -163,12 +164,15 @@ public class OperatingSystem {
     }
 
     public void createProcess(Template template) {
-        createChildProcess(template, KERNEL_ID);
+        int pid = pidGenerator.getNextPid();
+        PCB p = new PCB(template, pid);
+        processes.put(pid, p);
+        p.activate();
     }
 
-    public int createChildProcess(Template template, int parent) {
+    public int createChildProcess(Template template, int parent, Process childProcess) {
         int pid = pidGenerator.getNextPid();
-        PCB p = new PCB(template, pid, parent);
+        PCB p = new PCB(template, childProcess, pid, parent);
         processes.put(pid, p);
         p.activate();
         return pid;
@@ -202,6 +206,10 @@ public class OperatingSystem {
         semaphore.signal();
     }
 
+    public void removeFromSemaphore(int pid) {
+        semaphore.removeFromQueue(pid);
+    }
+
     public Word readAcrossPageBreak(Page page1, int offset, Page page2) {
         return mainMemory.readAcrossPageBreak(page1, offset, page2);
     }
@@ -211,13 +219,13 @@ public class OperatingSystem {
     }
 
     public void exit(int pid, Set<Integer> children) {
-//        // Cascading termination
-//        for (int child : children) {
-//            PCB p = processes.get(child);
-//            if (p != null) {
-//                p.terminateProcess();
-//            }
-//        }
+        // Cascading termination
+        for (int child : children) {
+            PCB p = processes.get(child);
+            if (p != null) {
+                p.terminateProcess();
+            }
+        }
         terminated.add(processes.remove(pid));
     }
 

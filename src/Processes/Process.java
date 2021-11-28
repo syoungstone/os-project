@@ -19,6 +19,16 @@ public class Process {
         }
     }
 
+    // Used for creating a child process
+    // Instructions start immediately after FORK instruction used to create child
+    Process(Process parent, Section currentSection) {
+        sections = new LinkedList<>();
+        sections.add(currentSection.deepCopy());
+        for (Section section : parent.sections) {
+            sections.add(section.deepCopy());
+        }
+    }
+
     Section nextSection() {
         return sections.poll();
     }
@@ -40,6 +50,15 @@ public class Process {
 
         boolean isCritical() {
             return critical;
+        }
+
+        Section deepCopy() {
+            Section copy = new Section(critical);
+            Queue<OperationSet> copyOpSets = copy.getOperationSets();
+            for (OperationSet opSet : operationSets) {
+                copyOpSets.add(new OperationSet(opSet.getOperation(), opSet.getCycles()));
+            }
+            return copy;
         }
     }
 
