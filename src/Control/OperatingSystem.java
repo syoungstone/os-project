@@ -117,6 +117,10 @@ public class OperatingSystem {
             processor.advance();
             // Busy wait until all threads have finished
             while (!(processor.cycleFinished() && ioModule.cycleFinished()));
+            // Check for an I/O interrupt
+            if (ioModule.interruptGenerated()) {
+                ioModule.handleInterrupt();
+            }
             if (elapsedCycles % CYCLES_PER_STATUS_PRINTOUT == 0) {
                 printStatus();
             }
@@ -248,14 +252,18 @@ public class OperatingSystem {
 
     private class IoModule {
 
+        private static final int INTERRUPT_RANDOM_BOUND = 16;
+
         private Thread ioThread;
         private final Object threadCoordinator;
         private final Set<Integer> waitingThisCycle;
+        private boolean interrupt;
 
         IoModule() {
             instantiateThread();
             threadCoordinator = new Object();
             waitingThisCycle = new HashSet<>();
+            interrupt = false;
         }
 
         void start() {
@@ -268,6 +276,7 @@ public class OperatingSystem {
             synchronized (threadCoordinator) {
                 threadCoordinator.notifyAll();
             }
+            generateRandomInterrupt();
         }
 
         void stop() {
@@ -277,6 +286,24 @@ public class OperatingSystem {
 
         boolean cycleFinished() {
             return ioThread.getState() == Thread.State.WAITING;
+        }
+
+        boolean interruptGenerated() {
+            return interrupt;
+        }
+
+        // Simulates the use of CPU cycle time to handle an I/O interrupt
+        void handleInterrupt() {
+            interrupt = false;
+            sleep();
+        }
+
+        // Provides a 1 in 16 chance of generating an I/O interrupt
+        private void generateRandomInterrupt() {
+            Random random = new Random();
+            if (random.nextInt(INTERRUPT_RANDOM_BOUND) == 0) {
+                interrupt = true;
+            }
         }
 
         private void instantiateThread() {
