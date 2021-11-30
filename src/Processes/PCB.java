@@ -46,7 +46,8 @@ public class PCB implements Comparable<PCB> {
 
         this.memoryRequiredMB = template.memoryRequirements();
         this.memoryRequiredBytes = 1024 * 1024 * memoryRequiredMB;
-        this.pageTable = new ArrayList<>();
+        List<Page> pages = OperatingSystem.getInstance().requestMemory(memoryRequiredMB);
+        this.pageTable = new ArrayList<>(pages);
         this.register = new Register();
         this.lastPageAccessed = null;
 
@@ -54,16 +55,8 @@ public class PCB implements Comparable<PCB> {
         this.process = process;
         // startTime = System.currentTimeMillis();
         this.criticalSecured = false;
-    }
 
-    public void activate() {
-        if (state == State.NEW) {
-            List<Page> pages = OperatingSystem.getInstance().requestMemory(memoryRequiredMB);
-            if (pages != null) {
-                pageTable.addAll(pages);
-                newOpSet();
-            }
-        }
+        newOpSet();
     }
 
     public State getState() {
@@ -198,7 +191,6 @@ public class PCB implements Comparable<PCB> {
         releaseCriticalSection();
         OperatingSystem.getInstance().releaseIO(pid);
         OperatingSystem.getInstance().releaseMemory(pageTable);
-        pageTable.clear();
         OperatingSystem.getInstance().exit(pid, children);
     }
 
@@ -240,7 +232,7 @@ public class PCB implements Comparable<PCB> {
         if (currentOpSet.getOperation() == Operation.CALCULATE
                 || currentOpSet.getOperation() == Operation.FORK) {
             state = State.READY;
-            OperatingSystem.getInstance().requestCPU(pid);
+            OperatingSystem.getInstance().requestCPU(this);
         } else if (currentOpSet.getOperation() == Operation.IO) {
             state = State.WAIT;
             OperatingSystem.getInstance().requestIO(pid);
