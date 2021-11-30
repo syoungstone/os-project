@@ -13,6 +13,7 @@ import Processor.Processor;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class OperatingSystem {
 
@@ -33,7 +34,8 @@ public class OperatingSystem {
     private final Map<Integer, PCB> processes;
     private final List<PCB> terminated;
     private final Set<Integer> waiting;
-    private final Semaphore semaphore;
+    // One critical section semaphore per template
+    private final List<Semaphore> semaphores;
     private final PidGenerator pidGenerator;
 
     private OperatingSystem() {
@@ -48,7 +50,7 @@ public class OperatingSystem {
         terminated = Collections.synchronizedList(new ArrayList<>());
         waiting = Collections.synchronizedSet(new HashSet<>());
         // Semaphore & PidGenerator instance methods are synchronized for thread safety
-        semaphore = new Semaphore();
+        semaphores = Collections.synchronizedList(new ArrayList<>());
         pidGenerator = new PidGenerator();
     }
 
@@ -56,7 +58,12 @@ public class OperatingSystem {
         System.out.println("Booting up...");
         System.out.println("Loading templates...");
         try {
-            selectTemplates(Template.getTemplates());
+            List<Template> templates = Template.getTemplates();
+            // Create one critical section semaphore for each template
+            for (int i = 0 ; i < templates.size() ; i++) {
+                semaphores.add(new Semaphore());
+            }
+            selectTemplates(templates);
             runOS();
         } catch (MalformedTemplateException e) {
             System.out.println(e.getMessage());
@@ -149,7 +156,8 @@ public class OperatingSystem {
         System.out.println("Total processes running: " + processes.size());
         System.out.println("Total processes in ready queue: " + processor.getReadyCount());
         System.out.println("Total processes executing I/O cycles: " + waiting.size());
-        System.out.println("Total processes waiting on critical section: " + semaphore.getWaitingCount());
+        System.out.println("Total processes waiting on critical section: "
+                + semaphores.stream().mapToInt(Semaphore::getWaitingCount).sum());
         System.out.println("Total processes terminated: " + terminated.size());
         System.out.println("---------------------------------------------------------------");
     }
@@ -202,16 +210,16 @@ public class OperatingSystem {
         waiting.remove(pid);
     }
 
-    public void requestCriticalSection(int pid) {
-        semaphore.wait(pid);
+    public void requestCriticalSection(int pid, int index) {
+        semaphores.get(index).wait(pid);
     }
 
-    public void releaseCriticalSection() {
-        semaphore.signal();
+    public void releaseCriticalSection(int index) {
+        semaphores.get(index).signal();
     }
 
-    public void removeFromSemaphore(int pid) {
-        semaphore.removeFromQueue(pid);
+    public void removeFromSemaphore(int pid, int index) {
+        semaphores.get(index).removeFromQueue(pid);
     }
 
     public Word readAcrossPageBreak(Page page1, int offset, Page page2) {

@@ -13,33 +13,37 @@ public class Template {
 
     private static List<Template> templates;
 
-    private final List<Section> sections;
+    private final int index;
     private final String name;
     private final int memoryRequiredMB;
+    private final List<Section> sections;
 
-    private Template(String name, int memoryRequiredMB) {
+    private Template(int index, String name, int memoryRequiredMB) {
+        this.index = index;
         this.name = name;
         this.memoryRequiredMB = memoryRequiredMB;
         this.sections = new ArrayList<>();
     }
 
     private static void loadTemplates() throws MalformedTemplateException {
+        int index = 0;
         templates = new ArrayList<>();
         final File directory = Paths.get(TEMPLATES_DIRECTORY_PATH).toFile();
         File[] files = directory.listFiles();
         if (files != null) {
             for (final File file : files) {
                 if (!file.isDirectory() && file.getName().endsWith(".txt")) {
-                    Template template = loadTemplate(file);
+                    Template template = loadTemplate(index, file);
                     if (template != null) {
                         templates.add(template);
+                        index++;
                     }
                 }
             }
         }
     }
 
-    private static Template loadTemplate(File file) throws MalformedTemplateException {
+    private static Template loadTemplate(int index, File file) throws MalformedTemplateException {
         String name = file.getName().split("\\.")[0];
         Template template;
         List<Section> sections;
@@ -52,7 +56,7 @@ public class Template {
                 if (contents.length == 2 && MEMORY_REQUIRED_STRING.equals(contents[0])) {
                     try {
                         int memoryRequiredMB = Integer.parseInt(contents[1]);
-                        template = new Template(name, memoryRequiredMB);
+                        template = new Template(index, name, memoryRequiredMB);
                         sections = template.getSections();
                     } catch (Exception e) {
                         throw new MalformedTemplateException("Memory requirement not an integer");
@@ -142,6 +146,10 @@ public class Template {
 
     public synchronized int memoryRequirements() {
         return memoryRequiredMB;
+    }
+
+    public int index() {
+        return index;
     }
 
     public synchronized String name() {

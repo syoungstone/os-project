@@ -194,7 +194,7 @@ public class PCB implements Comparable<PCB> {
 
     public synchronized void terminateProcess() {
         state = State.EXIT;
-        OperatingSystem.getInstance().removeFromSemaphore(pid);
+        OperatingSystem.getInstance().removeFromSemaphore(pid, template.index());
         releaseCriticalSection();
         OperatingSystem.getInstance().releaseIO(pid);
         OperatingSystem.getInstance().releaseMemory(pageTable);
@@ -210,13 +210,13 @@ public class PCB implements Comparable<PCB> {
 
     private void requestCriticalSection() {
         state = State.WAIT;
-        OperatingSystem.getInstance().requestCriticalSection(pid);
+        OperatingSystem.getInstance().requestCriticalSection(pid, template.index());
     }
 
     private void releaseCriticalSection() {
         if (criticalSecured) {
             criticalSecured = false;
-            OperatingSystem.getInstance().releaseCriticalSection();
+            OperatingSystem.getInstance().releaseCriticalSection(template.index());
         }
     }
 
