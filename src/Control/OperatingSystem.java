@@ -165,21 +165,17 @@ public class OperatingSystem {
 
     public void createProcess(Template template) {
         int pid = pidGenerator.getNextPid();
-        PCB p = new PCB(template, pid);
-        processes.put(pid, p);
-        p.activate();
+        processes.put(pid, new PCB(template, pid));
     }
 
     public int createChildProcess(Template template, int parent, Process childProcess) {
         int pid = pidGenerator.getNextPid();
-        PCB p = new PCB(template, childProcess, pid, parent);
-        processes.put(pid, p);
-        p.activate();
+        processes.put(pid, new PCB(template, childProcess, pid, parent));
         return pid;
     }
 
-    public void requestCPU(int pid) {
-        processor.request(processes.get(pid));
+    public void requestCPU(PCB p) {
+        processor.request(p);
     }
 
     public List<Page> requestMemory(int requestSizeMB) {
