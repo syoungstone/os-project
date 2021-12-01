@@ -94,7 +94,7 @@ public class MainMemory {
         int frameNumber1 = page1.getFrameNumber();
         int frameNumber2 = page2.getFrameNumber();
         Frame frame1 = frames.get(frameNumber1);
-        Frame frame2 = frames.get(frameNumber1);
+        Frame frame2 = frames.get(frameNumber2);
         int physicalAddress1 = frame1.getStartAddress() + offset;
         int sizeFirstChunk = Page.getSizeBytes() - offset;
         int physicalAddress2 = frame2.getStartAddress();
