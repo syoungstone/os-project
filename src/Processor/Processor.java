@@ -1,6 +1,8 @@
 package Processor;
 
 import Processes.PCB;
+import Scheduling.MLQScheduler;
+import Scheduling.SJFScheduler;
 
 public class Processor {
 

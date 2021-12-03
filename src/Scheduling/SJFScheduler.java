@@ -1,4 +1,4 @@
-package Processor;
+package Scheduling;
 
 import Processes.PCB;
 
