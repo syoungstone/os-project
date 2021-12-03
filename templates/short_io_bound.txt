@@ -1,5 +1,6 @@
 MEMORY_REQUIRED_MB: 13
 CALCULATE       18      35
+FORK
 IO              123     180
 CRITICAL
 CALCULATE       18      35
