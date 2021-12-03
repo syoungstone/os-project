@@ -14,16 +14,14 @@ public class PCB implements Comparable<PCB> {
     private final int parent;
     private final Set<Integer> children;
 
-    private final int memoryRequiredMB;
     private final int memoryRequiredBytes;
     private final List<Page> pageTable;
     private final Register register;
     private Integer lastPageAccessed;
 
-    // private final long startTime;
     private final Template template;
     private final Process process;
-    // private int priority;
+    private final Priority priority;
 
     private State state;
     private Process.Section currentSection;
@@ -44,7 +42,7 @@ public class PCB implements Comparable<PCB> {
         this.parent = parent;
         this.children = new HashSet<>();
 
-        this.memoryRequiredMB = template.memoryRequirements();
+        int memoryRequiredMB = template.memoryRequirements();
         this.memoryRequiredBytes = 1024 * 1024 * memoryRequiredMB;
         List<Page> pages = OperatingSystem.getInstance().requestMemory(memoryRequiredMB);
         this.pageTable = new ArrayList<>(pages);
@@ -53,10 +51,25 @@ public class PCB implements Comparable<PCB> {
 
         this.template = template;
         this.process = process;
-        // startTime = System.currentTimeMillis();
+
+        // Equal chance of being assigned each priority
+        Random random = new Random();
+        int priority = random.nextInt(3);
+        if (priority == 0) {
+            this.priority = Priority.LOW;
+        } else if (priority == 1) {
+            this.priority = Priority.MEDIUM;
+        } else {
+            this.priority = Priority.HIGH;
+        }
+
         this.criticalSecured = false;
 
         newOpSet();
+    }
+
+    public Priority getPriority() {
+        return priority;
     }
 
     public State getState() {

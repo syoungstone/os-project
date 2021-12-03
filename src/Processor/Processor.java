@@ -9,7 +9,7 @@ public class Processor {
 
     public Processor() {
         core1 = new Core(new SJFScheduler());
-        core2 = new Core(new RRScheduler());
+        core2 = new Core(new MLQScheduler());
     }
 
     public void request(PCB p) {
