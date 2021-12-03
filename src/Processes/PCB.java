@@ -3,12 +3,19 @@ package Processes;
 import Control.OperatingSystem;
 import Memory.Page;
 import Memory.Word;
+import Processor.Processor;
 
 import java.util.*;
 
 public class PCB implements Comparable<PCB> {
 
     private static final int FORK_RANDOM_BOUND = 4;
+
+    private final Processor.CoreId coreId;
+
+    private long startTime = 0;
+    private long currentWaitStartTime = 0;
+    private long waitingTime = 0;
 
     private final int pid;
     private final int parent;
@@ -38,6 +45,16 @@ public class PCB implements Comparable<PCB> {
     public PCB(Template template, Process process, int pid, int parent) {
         this.state = State.NEW;
 
+        // Equal chance of being assigned either processor core
+        // Process will always be sent to same core when requesting CPU
+        Random random = new Random();
+        int coreId = random.nextInt(2);
+        if (coreId == 0) {
+            this.coreId = Processor.CoreId.CORE1;
+        } else {
+            this.coreId = Processor.CoreId.CORE2;
+        }
+
         this.pid = pid;
         this.parent = parent;
         this.children = new HashSet<>();
@@ -53,7 +70,6 @@ public class PCB implements Comparable<PCB> {
         this.process = process;
 
         // Equal chance of being assigned each priority
-        Random random = new Random();
         int priority = random.nextInt(3);
         if (priority == 0) {
             this.priority = Priority.LOW;
@@ -68,6 +84,25 @@ public class PCB implements Comparable<PCB> {
         newOpSet();
     }
 
+    public void setStartTime(long startTime) {
+        this.startTime = startTime;
+        if (state == State.READY) {
+            this.currentWaitStartTime = startTime;
+        }
+    }
+
+    public long getTurnaroundTime() {
+        return System.currentTimeMillis() - startTime;
+    }
+
+    public long getWaitingTime() {
+        return waitingTime;
+    }
+
+    public Processor.CoreId getCoreId() {
+        return coreId;
+    }
+
     public Priority getPriority() {
         return priority;
     }
@@ -78,6 +113,11 @@ public class PCB implements Comparable<PCB> {
 
     public void setState(State state) {
         this.state = state;
+        if (state == State.READY) {
+            currentWaitStartTime = System.currentTimeMillis();
+        } else if (state == State.RUN) {
+            waitingTime += (System.currentTimeMillis() - currentWaitStartTime);
+        }
     }
 
     public int getPid() {
@@ -245,6 +285,7 @@ public class PCB implements Comparable<PCB> {
         if (currentOpSet.getOperation() == Operation.CALCULATE
                 || currentOpSet.getOperation() == Operation.FORK) {
             state = State.READY;
+            currentWaitStartTime = System.currentTimeMillis();
             OperatingSystem.getInstance().requestCPU(this);
         } else if (currentOpSet.getOperation() == Operation.IO) {
             state = State.WAIT;

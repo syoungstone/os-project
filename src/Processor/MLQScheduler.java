@@ -53,4 +53,8 @@ public class MLQScheduler extends ShortTermScheduler {
         return counter >= TIME_QUANTUM;
     }
 
+    public String name() {
+        return "Multi-Level Queue";
+    }
+
 }

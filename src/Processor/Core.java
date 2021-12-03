@@ -8,11 +8,13 @@ public class Core {
 
     private static final int NUM_HARDWARE_THREADS = 4;
 
+    private final StatisticalUnit statisticalUnit;
     private final Object threadCoordinator;
     private final ShortTermScheduler shortTermScheduler;
     private final HardwareThread[] hardwareThreads;
 
     Core(ShortTermScheduler scheduler) {
+        statisticalUnit = new StatisticalUnit();
         threadCoordinator = new Object();
         shortTermScheduler = scheduler;
         hardwareThreads = new HardwareThread[NUM_HARDWARE_THREADS];
@@ -21,7 +23,12 @@ public class Core {
         }
     }
 
+    public String getSchedulerName() {
+        return shortTermScheduler.name();
+    }
+
     public void start() {
+        statisticalUnit.start();
         for (HardwareThread hardwareThread : hardwareThreads) {
             hardwareThread.start();
         }
@@ -38,6 +45,11 @@ public class Core {
         for (HardwareThread hardwareThread : hardwareThreads) {
             hardwareThread.stop();
         }
+        statisticalUnit.stop();
+    }
+
+    public synchronized void registerTermination(PCB p) {
+        statisticalUnit.registerTermination(p);
     }
 
     public boolean cycleFinished() {
@@ -48,7 +60,7 @@ public class Core {
         return finished;
     }
 
-    public void request(PCB p) {
+    public synchronized void request(PCB p) {
         shortTermScheduler.add(p);
     }
 
@@ -65,6 +77,17 @@ public class Core {
             }
         }
         return pids.toString();
+    }
+
+    public void printStatistics() {
+        String utilization = String.format("%.2f", (statisticalUnit.getUtilization() * 100));
+        String throughput = String.format("%.2f", statisticalUnit.getThroughput());
+        String turnaround = String.format("%.2f", statisticalUnit.getAvgTurnaroundTime());
+        String waiting = String.format("%.2f", statisticalUnit.getAvgWaitingTime());
+        System.out.println("\t\tCPU Utilization: " + utilization + "%");
+        System.out.println("\t\tThroughput: " + throughput + " processes/second");
+        System.out.println("\t\tAverage Turnaround Time: " + turnaround + " ms");
+        System.out.println("\t\tAverage Waiting Time: " + waiting + " ms");
     }
 
     private class HardwareThread {
@@ -138,7 +161,9 @@ public class Core {
                 if (shortTermScheduler.scheduleNew(counter) || p.getState() != State.RUN) {
                     scheduleNew();
                 }
+                statisticalUnit.incrementUtilizedCycles();
             }
+            statisticalUnit.incrementTotalCycles();
         }
 
     }

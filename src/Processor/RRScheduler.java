@@ -33,4 +33,8 @@ public class RRScheduler extends ShortTermScheduler {
         return counter >= TIME_QUANTUM;
     }
 
+    public String name() {
+        return "Round Robin";
+    }
+
 }

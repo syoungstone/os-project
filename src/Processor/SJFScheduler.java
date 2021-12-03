@@ -33,4 +33,8 @@ public class SJFScheduler extends ShortTermScheduler {
         return false;
     }
 
+    public String name() {
+        return "Shortest Job First";
+    }
+
 }

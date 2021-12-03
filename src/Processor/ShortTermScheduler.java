@@ -7,4 +7,5 @@ public abstract class ShortTermScheduler {
     public abstract PCB remove();
     public abstract int getReadyCount();
     public abstract boolean scheduleNew(int counter);
+    public abstract String name();
 }

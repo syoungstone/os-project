@@ -13,7 +13,6 @@ import Processor.Processor;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class OperatingSystem {
 
@@ -119,6 +118,9 @@ public class OperatingSystem {
         ioModule.start();
         processor.start();
         startTime = System.currentTimeMillis();
+        for (PCB p : processes.values()) {
+            p.setStartTime(startTime);
+        }
         while (processes.size() > 0 && elapsedCycles < maxCycles) {
             ioModule.advance();
             processor.advance();
@@ -141,6 +143,7 @@ public class OperatingSystem {
         } else {
             System.out.println("\nTotal cycles elapsed has reached the maximum amount of " + maxCycles + ". Halting.");
         }
+        processor.printStatistics();
     }
 
     private void printStatus() {
@@ -182,7 +185,9 @@ public class OperatingSystem {
 
     public int createChildProcess(Template template, int parent, Process childProcess) {
         int pid = pidGenerator.getNextPid();
-        processes.put(pid, new PCB(template, childProcess, pid, parent));
+        PCB p = new PCB(template, childProcess, pid, parent);
+        processes.put(pid,p);
+        p.setStartTime(System.currentTimeMillis());
         return pid;
     }
 
@@ -234,7 +239,13 @@ public class OperatingSystem {
                 p.terminateProcess();
             }
         }
-        terminated.add(processes.remove(pid));
+        PCB p = processes.remove(pid);
+        waiting.remove(pid);
+        if (p != null) {
+            terminated.add(p);
+            // For the purpose of recording core statistics
+            processor.registerTermination(p);
+        }
     }
 
     PCB pidLookup(int pid) {

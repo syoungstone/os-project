@@ -13,8 +13,10 @@ public class Processor {
     }
 
     public void request(PCB p) {
-        // Randomly assign to one of the cores
-        if (Math.random() < 0.5) {
+        // Process always sent to the same core
+        // This allows us to more easily measure core performance
+        CoreId coreId = p.getCoreId();
+        if (coreId == CoreId.CORE1) {
             core1.request(p);
         } else {
             core2.request(p);
@@ -36,6 +38,15 @@ public class Processor {
         core2.stop();
     }
 
+    public void registerTermination(PCB p) {
+        CoreId coreId = p.getCoreId();
+        if (coreId == CoreId.CORE1) {
+            core1.registerTermination(p);
+        } else {
+            core2.registerTermination(p);
+        }
+    }
+
     public boolean cycleFinished() {
         return core1.cycleFinished() && core2.cycleFinished();
     }
@@ -48,4 +59,16 @@ public class Processor {
         return core1.getReadyCount() + core2.getReadyCount();
     }
 
+    public void printStatistics() {
+        System.out.println("\nComparison of core performance:");
+        System.out.println("\n\tCore 1: " + core1.getSchedulerName());
+        core1.printStatistics();
+        System.out.println("\n\tCore 2: " + core2.getSchedulerName());
+        core2.printStatistics();
+    }
+
+
+    public enum CoreId {
+        CORE1, CORE2
+    }
 }
