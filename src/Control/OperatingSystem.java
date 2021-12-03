@@ -323,7 +323,7 @@ public class OperatingSystem {
                         for (int pid : waitingThisCycle) {
                             PCB p = pidLookup(pid);
                             if (p != null) {
-                                pidLookup(pid).progressOneCycle();
+                                p.progressOneCycle();
                             }
                         }
                         waitingThisCycle.clear();
