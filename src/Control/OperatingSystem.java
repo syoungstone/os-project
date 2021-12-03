@@ -1,5 +1,6 @@
 package Control;
 
+import Communication.IPCStandard;
 import Memory.MainMemory;
 import Memory.Page;
 import Memory.VirtualMemory;
@@ -180,13 +181,22 @@ public class OperatingSystem {
 
     public void createProcess(Template template) {
         int pid = pidGenerator.getNextPid();
-        processes.put(pid, new PCB(template, pid));
+        IPCStandard ipcStandard;
+        // Equal chance of being assigned either IPCStandard
+        Random random = new Random();
+        int standard = random.nextInt(2);
+        if (standard == 0) {
+            ipcStandard = IPCStandard.MESSAGE_PASSING;
+        } else {
+            ipcStandard = IPCStandard.ORDINARY_PIPE;
+        }
+        processes.put(pid, new PCB(template, pid, ipcStandard));
     }
 
-    public int createChildProcess(Template template, int parent, Process childProcess) {
+    public int createChildProcess(Template template, int parent, Process childProcess, IPCStandard ipcStandard) {
         int pid = pidGenerator.getNextPid();
-        PCB p = new PCB(template, childProcess, pid, parent);
-        processes.put(pid,p);
+        PCB p = new PCB(template, childProcess, pid, parent, ipcStandard);
+        processes.put(pid, p);
         p.setStartTime(System.currentTimeMillis());
         return pid;
     }

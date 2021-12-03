@@ -1,7 +1,6 @@
 package Processes;
 
-import Communication.Message;
-import Communication.MessagePasser;
+import Communication.*;
 import Control.OperatingSystem;
 import Memory.Page;
 import Memory.Word;
@@ -14,6 +13,7 @@ public class PCB implements Comparable<PCB> {
     private static final int FORK_RANDOM_BOUND = 4;
 
     private final Processor.CoreId coreId;
+    private final IPCStandard ipcStandard;
 
     private long startTime = 0;
     private long currentWaitStartTime = 0;
@@ -22,6 +22,10 @@ public class PCB implements Comparable<PCB> {
     private final int pid;
     private final int parent;
     private final Set<Integer> children;
+
+    // Only used if ipcStandard is IPCStandard.ORDINARY_PIPE
+    private final OrdinaryPipe pipeFromParent;
+    private final Map<Integer,OrdinaryPipe> pipesToChildren;
 
     private final int memoryRequiredBytes;
     private final List<Page> pageTable;
@@ -39,13 +43,21 @@ public class PCB implements Comparable<PCB> {
     private boolean criticalSecured;
 
     // For a process created at startup
-    public PCB(Template template, int pid) {
-        this(template, new Process(template), pid, OperatingSystem.KERNEL_ID);
+    public PCB(Template template, int pid, IPCStandard ipcStandard) {
+        this(template, new Process(template), pid, OperatingSystem.KERNEL_ID, ipcStandard);
     }
 
     // For a process created by a FORK
-    public PCB(Template template, Process process, int pid, int parent) {
+    public PCB(Template template, Process process, int pid, int parent, IPCStandard ipcStandard) {
         this.state = State.NEW;
+
+        this.ipcStandard = ipcStandard;
+        pipeFromParent = ipcStandard == IPCStandard.ORDINARY_PIPE
+                ? PipeManager.getInstance().createPipe(parent, pid)
+                : null;
+        pipesToChildren = ipcStandard == IPCStandard.ORDINARY_PIPE
+                ? new HashMap<>()
+                : null;
 
         // Equal chance of being assigned either processor core
         // Process will always be sent to same core when requesting CPU
@@ -133,8 +145,13 @@ public class PCB implements Comparable<PCB> {
             fork();
         } else if (currentOpSet.getOperation() == Operation.CALCULATE) {
             memoryAccess();
-            sendMessage();
-            receiveMessage();
+            if (ipcStandard == IPCStandard.MESSAGE_PASSING) {
+                sendMessage();
+                receiveMessage();
+            } else {
+                writeToPipes();
+                readFromPipe();
+            }
         }
 
         // Current set of operations completed
@@ -150,31 +167,18 @@ public class PCB implements Comparable<PCB> {
         Random random = new Random();
         if (random.nextInt(FORK_RANDOM_BOUND) == 0) {
             Process childProcess = new Process(process, currentSection);
-            int childPid = OperatingSystem.getInstance().createChildProcess(template, pid, childProcess);
+            int childPid = OperatingSystem.getInstance().createChildProcess(template, pid, childProcess, ipcStandard);
             children.add(childPid);
-        }
-    }
-
-    // Send current value of Register to all child processes
-    private void sendMessage() {
-        for (int child : children) {
-            MessagePasser.getInstance().send(child, new Message(pid, register.getContents()));
-        }
-    }
-
-    // Retrieve up to one Message waiting for the process in the MessagePasser
-    private void receiveMessage() {
-        Message message = MessagePasser.getInstance().receive(pid);
-        if (message != null && message.getSender() == parent) {
-            // Set register to the contents of the message
-            register.set(-1, message.getContents());
+            if (ipcStandard == IPCStandard.ORDINARY_PIPE) {
+                pipesToChildren.put(childPid, PipeManager.getInstance().retrievePipe(childPid));
+            }
         }
     }
 
     // Simulates memory access required to perform a calculation
     private void memoryAccess() {
         int logicalAddress = generateLogicalAddress();
-        Word contents = read(logicalAddress);
+        Word contents = readFromMemory(logicalAddress);
         register.set(logicalAddress, contents);
     }
 
@@ -208,7 +212,7 @@ public class PCB implements Comparable<PCB> {
         return random.nextInt(memoryRequiredBytes - Word.WORD_SIZE_IN_BYTES + 1);
     }
 
-    private Word read(int logicalAddress) {
+    private Word readFromMemory(int logicalAddress) {
         // Check if contents of logical address already stored in register
         if (register.isSet() && register.getLogicalAddress() == logicalAddress) {
             return register.getContents();
@@ -228,6 +232,42 @@ public class PCB implements Comparable<PCB> {
             }
             lastPageAccessed = pageNumber;
             return contents;
+        }
+    }
+
+    // Send current value of Register to all child processes
+    private void sendMessage() {
+        for (int child : children) {
+            MessagePasser.getInstance().send(child, new Message(pid, register.getContents()));
+        }
+    }
+
+    // Retrieve up to one Message waiting for the process in the MessagePasser
+    private void receiveMessage() {
+        Message message = MessagePasser.getInstance().receive(pid);
+        if (message != null && message.getSender() == parent) {
+            // Set register to the contents of the message
+            // logicalAddress of -1 indicates source of register contents was not one of this process's pages
+            register.set(-1, message.getContents());
+        }
+    }
+
+    // Send current value of Register to all child processes
+    private void writeToPipes() {
+        for (int child : children) {
+            pipesToChildren.get(child).write(pid, register.getContents());
+        }
+    }
+
+    // Retrieve up to one piece of information waiting for the process in the Pipe
+    private void readFromPipe() {
+        if (parent != OperatingSystem.KERNEL_ID) {
+            Word word = pipeFromParent.read(pid);
+            if (word != null) {
+                // Set register to the word retrieved from the Pipe
+                // logicalAddress of -1 indicates source of register contents was not one of this process's pages
+                register.set(-1, word);
+            }
         }
     }
 
