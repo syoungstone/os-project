@@ -321,7 +321,10 @@ public class OperatingSystem {
                         }
                         // Progress all processes receiving I/O
                         for (int pid : waitingThisCycle) {
-                            pidLookup(pid).progressOneCycle();
+                            PCB p = pidLookup(pid);
+                            if (p != null) {
+                                pidLookup(pid).progressOneCycle();
+                            }
                         }
                         waitingThisCycle.clear();
                     } catch (InterruptedException e) {
