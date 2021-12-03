@@ -16,7 +16,7 @@ public class MLQScheduler extends ShortTermScheduler {
     private final Queue<PCB> mediumPriorityQueue;
     private final Queue<PCB> lowPriorityQueue;
 
-    MLQScheduler() {
+    public MLQScheduler() {
         highPriorityQueue = new LinkedList<>();
         mediumPriorityQueue = new LinkedList<>();
         lowPriorityQueue = new LinkedList<>();

@@ -10,7 +10,7 @@ public class SJFScheduler extends ShortTermScheduler {
 
     private final Queue<PCB> queue;
 
-    SJFScheduler() {
+    public SJFScheduler() {
         // The compareTo() method in the PCB class will determine the ordering
         // This method orders PCBs by number of CALCULATE operations in current operation set
         queue = new PriorityQueue<>();

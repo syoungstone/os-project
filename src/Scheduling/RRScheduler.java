@@ -13,7 +13,7 @@ public class RRScheduler extends ShortTermScheduler {
 
     private final Queue<PCB> queue;
 
-    RRScheduler() {
+    public RRScheduler() {
         queue = new LinkedList<>();
     }
 
