@@ -1,5 +1,7 @@
 package Processes;
 
+import Communication.Message;
+import Communication.MessagePasser;
 import Control.OperatingSystem;
 import Memory.Page;
 import Memory.Word;
@@ -131,6 +133,8 @@ public class PCB implements Comparable<PCB> {
             fork();
         } else if (currentOpSet.getOperation() == Operation.CALCULATE) {
             memoryAccess();
+            sendMessage();
+            receiveMessage();
         }
 
         // Current set of operations completed
@@ -148,6 +152,22 @@ public class PCB implements Comparable<PCB> {
             Process childProcess = new Process(process, currentSection);
             int childPid = OperatingSystem.getInstance().createChildProcess(template, pid, childProcess);
             children.add(childPid);
+        }
+    }
+
+    // Send current value of Register to all child processes
+    private void sendMessage() {
+        for (int child : children) {
+            MessagePasser.getInstance().send(child, new Message(pid, register.getContents()));
+        }
+    }
+
+    // Retrieve up to one Message waiting for the process in the MessagePasser
+    private void receiveMessage() {
+        Message message = MessagePasser.getInstance().receive(pid);
+        if (message != null && message.getSender() == parent) {
+            // Set register to the contents of the message
+            register.set(-1, message.getContents());
         }
     }
 
