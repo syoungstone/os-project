@@ -2,6 +2,7 @@ package Processes;
 
 import Communication.*;
 import Control.OperatingSystem;
+import Control.ResourceManager;
 import Memory.Page;
 import Memory.Word;
 import Processor.Processor;
@@ -11,6 +12,7 @@ import java.util.*;
 public class PCB implements Comparable<PCB> {
 
     private static final int FORK_RANDOM_BOUND = 4;
+    private static final int RESOURCE_REQUEST_RANDOM_BOUND = 8;
 
     private final Processor.CoreId coreId;
     private final IPCStandard ipcStandard;
@@ -31,6 +33,9 @@ public class PCB implements Comparable<PCB> {
     private final List<Page> pageTable;
     private final Register register;
     private Integer lastPageAccessed;
+
+    private final int[] maxResources;
+    private final int[] currentResources;
 
     private final Template template;
     private final Process process;
@@ -79,6 +84,14 @@ public class PCB implements Comparable<PCB> {
         this.pageTable = new ArrayList<>(pages);
         this.register = new Register();
         this.lastPageAccessed = null;
+
+        maxResources = new int[ResourceManager.NUM_RESOURCE_TYPES];
+        currentResources = new int[ResourceManager.NUM_RESOURCE_TYPES];
+        // Randomly deciding the maximum resources requested by this process
+        for (int i = 0 ; i < ResourceManager.NUM_RESOURCE_TYPES ; i++) {
+            maxResources[i] = random.nextInt(ResourceManager.NUM_RESOURCES_PER_TYPE / 4);
+        }
+        ResourceManager.getInstance().addProcess(pid, maxResources);
 
         this.template = template;
         this.process = process;
@@ -300,6 +313,7 @@ public class PCB implements Comparable<PCB> {
 
     public synchronized void terminateProcess() {
         state = State.EXIT;
+        ResourceManager.getInstance().removeProcess(pid);
         OperatingSystem.getInstance().removeFromSemaphore(pid, template.index());
         releaseCriticalSection();
         OperatingSystem.getInstance().releaseIO(pid);
@@ -344,13 +358,31 @@ public class PCB implements Comparable<PCB> {
     private void requestResource() {
         if (currentOpSet.getOperation() == Operation.CALCULATE
                 || currentOpSet.getOperation() == Operation.FORK) {
-            state = State.READY;
-            currentWaitStartTime = System.currentTimeMillis();
-            OperatingSystem.getInstance().requestCPU(this);
+            // Possibility of needing to acquire more resources before proceeding
+            Random random = new Random();
+            int[] resourceRequest = new int[ResourceManager.NUM_RESOURCE_TYPES];
+            if (random.nextInt(RESOURCE_REQUEST_RANDOM_BOUND) == 0) {
+                for (int i = 0 ; i < ResourceManager.NUM_RESOURCE_TYPES ; i++) {
+                    resourceRequest[i] = random.nextInt(maxResources[i] - currentResources[i] + 1);
+                }
+                OperatingSystem.getInstance().requestResources(pid, resourceRequest);
+            } else {
+                necessaryResourcesAcquired(resourceRequest);
+            }
         } else if (currentOpSet.getOperation() == Operation.IO) {
             state = State.WAIT;
             OperatingSystem.getInstance().requestIO(pid);
         }
+    }
+
+    // Called when done waiting on resources and ready to wait on CPU
+    public synchronized void necessaryResourcesAcquired(int[] resourceRequest) {
+        for (int i = 0 ; i < ResourceManager.NUM_RESOURCE_TYPES ; i++) {
+            currentResources[i] += resourceRequest[i];
+        }
+        state = State.READY;
+        currentWaitStartTime = System.currentTimeMillis();
+        OperatingSystem.getInstance().requestCPU(this);
     }
 
     // Compares PCBs by length of CALCULATE bursts for the purpose of the SJFScheduler

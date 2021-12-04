@@ -33,7 +33,8 @@ public class OperatingSystem {
     private long startTime = 0;
     private final Map<Integer, PCB> processes;
     private final List<PCB> terminated;
-    private final Set<Integer> waiting;
+    private final Set<Integer> waitingOnIo;
+    private final Map<Integer, int[]> waitingOnResources;
     // One critical section semaphore per template
     private final List<Semaphore> semaphores;
     private final PidGenerator pidGenerator;
@@ -48,7 +49,8 @@ public class OperatingSystem {
         // ConcurrentHashMap class & Collections.synchronized methods for thread safety
         processes = new ConcurrentHashMap<>();
         terminated = Collections.synchronizedList(new ArrayList<>());
-        waiting = Collections.synchronizedSet(new HashSet<>());
+        waitingOnIo = Collections.synchronizedSet(new HashSet<>());
+        waitingOnResources = new ConcurrentHashMap<>();
         // Semaphore & PidGenerator instance methods are synchronized for thread safety
         semaphores = Collections.synchronizedList(new ArrayList<>());
         pidGenerator = new PidGenerator();
@@ -123,6 +125,14 @@ public class OperatingSystem {
             p.setStartTime(startTime);
         }
         while (processes.size() > 0 && elapsedCycles < maxCycles) {
+            for (Map.Entry<Integer,int[]> entry : waitingOnResources.entrySet()) {
+                int pid = entry.getKey();
+                int[] resourceRequest = entry.getValue();
+                PCB p = processes.get(pid);
+                if (p != null && ResourceManager.getInstance().requestResources(pid, resourceRequest)) {
+                    p.necessaryResourcesAcquired(resourceRequest);
+                }
+            }
             ioModule.advance();
             processor.advance();
             // Busy wait until all threads have finished
@@ -159,7 +169,8 @@ public class OperatingSystem {
         System.out.println("PIDs of processes in CPU: " + processor.getCurrentPids());
         System.out.println("Total processes running: " + processes.size());
         System.out.println("Total processes in ready queue: " + processor.getReadyCount());
-        System.out.println("Total processes executing I/O cycles: " + waiting.size());
+        System.out.println("Total processes executing I/O cycles: " + waitingOnIo.size());
+        System.out.println("Total processes waiting on resources: " + waitingOnResources.size());
         System.out.println("Total processes waiting on critical section: "
                 + semaphores.stream().mapToInt(Semaphore::getWaitingCount).sum());
         System.out.println("Total processes terminated: " + terminated.size());
@@ -214,11 +225,11 @@ public class OperatingSystem {
     }
 
     public void requestIO(int pid) {
-        waiting.add(pid);
+        waitingOnIo.add(pid);
     }
 
     public void releaseIO(int pid) {
-        waiting.remove(pid);
+        waitingOnIo.remove(pid);
     }
 
     public void requestCriticalSection(int pid, int index) {
@@ -227,6 +238,17 @@ public class OperatingSystem {
 
     public void releaseCriticalSection(int index) {
         semaphores.get(index).signal();
+    }
+
+    public void requestResources(int pid, int[] resourceRequest) {
+        if (ResourceManager.getInstance().requestResources(pid, resourceRequest)) {
+            PCB p = processes.get(pid);
+            if (p != null) {
+                p.necessaryResourcesAcquired(resourceRequest);
+            }
+        } else {
+            waitingOnResources.put(pid, resourceRequest);
+        }
     }
 
     public void removeFromSemaphore(int pid, int index) {
@@ -250,7 +272,8 @@ public class OperatingSystem {
             }
         }
         PCB p = processes.remove(pid);
-        waiting.remove(pid);
+        waitingOnIo.remove(pid);
+        waitingOnResources.remove(pid);
         if (p != null) {
             terminated.add(p);
             // For the purpose of recording core statistics
@@ -296,7 +319,7 @@ public class OperatingSystem {
         }
 
         void advance() {
-            waitingThisCycle.addAll(waiting);
+            waitingThisCycle.addAll(waitingOnIo);
             // Notify waiting ioThread to start a new cycle
             synchronized (threadCoordinator) {
                 threadCoordinator.notifyAll();
