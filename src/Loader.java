@@ -1,8 +1,10 @@
 import Control.OperatingSystem;
+import GUI.TaskManager;
+import javafx.application.Application;
 
 public class Loader {
     public static void main(String[] args) {
-        OperatingSystem os = OperatingSystem.getInstance();
-        os.boot();
+        // Launch GUI
+        Application.launch(TaskManager.class, args);
     }
 }

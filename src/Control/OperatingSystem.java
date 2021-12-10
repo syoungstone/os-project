@@ -1,6 +1,7 @@
 package Control;
 
 import Communication.IPCStandard;
+import GUI.TaskManager;
 import Memory.MainMemory;
 import Memory.Page;
 import Memory.VirtualMemory;
@@ -39,6 +40,8 @@ public class OperatingSystem {
     private final List<Semaphore> semaphores;
     private final PidGenerator pidGenerator;
 
+    private TaskManager taskManager;
+
     private OperatingSystem() {
         processor = new Processor();
         ioModule = new IoModule();
@@ -56,68 +59,40 @@ public class OperatingSystem {
         pidGenerator = new PidGenerator();
     }
 
-    public void boot() {
-        System.out.println("Booting up...");
-        System.out.println("Loading templates...");
+    public void boot(TaskManager taskManager) {
+
+        this.taskManager = taskManager;
+
+        sleep(1000);
+
         try {
             List<Template> templates = Template.getTemplates();
             // Create one critical section semaphore for each template
             for (int i = 0 ; i < templates.size() ; i++) {
                 semaphores.add(new Semaphore());
             }
-            selectTemplates(templates);
-            runOS();
+            taskManager.requestNumProcesses(templates);
         } catch (MalformedTemplateException e) {
             System.out.println(e.getMessage());
             System.out.println("Exiting...");
         }
     }
 
-    private void selectTemplates(List<Template> templates) {
-        System.out.println("\nAvailable process templates:");
-        int templateNumber = 1;
-        for (Template t : templates) {
-            System.out.println(templateNumber + ") " + t.name());
-            templateNumber++;
-        }
-        Scanner sc = new Scanner(System.in);
-        for (Template t : templates) {
-            boolean validInput = false;
-            while(!validInput) {
-                System.out.println("\nSelect a number of processes to create using template: " + t.name());
-                try {
-                    int numProcesses = Integer.parseInt(sc.nextLine());
-                    validInput = true;
-                    System.out.println("Creating " + numProcesses + " processes from template: " + t.name());
-                    for (int i = 0; i < numProcesses; i++) {
-                        createProcess(t);
-                    }
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid input. Please try again.");
-                }
+    public void createProcesses(List<Template> templates, List<Integer> processesPerTemplate) {
+        for (int i = 0 ; i < templates.size() ; i++) {
+            int numProcesses = processesPerTemplate.get(i);
+            for (int j = 0; j < numProcesses; j++) {
+                createProcess(templates.get(i));
             }
         }
-        System.out.println("\nAll processes successfully created.");
-        boolean validInput = false;
-        while(!validInput) {
-            System.out.println("\nPlease enter a number of cycles to execute before halting OS,");
-            System.out.println("or enter 'none' to continue until last process terminates:");
-            try {
-                String input = sc.nextLine().trim().toLowerCase();
-                if (input.equals("none")) {
-                    maxCycles = Long.MAX_VALUE;
-                } else {
-                    maxCycles = Integer.parseInt(input);
-                }
-                validInput = true;
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please try again.");
-            }
-        }
-        System.out.println("Thank you. Launching OS...");
+        taskManager.requestNumCycles();
     }
 
-    private void runOS() {
+    public void setMaxCycles(long maxCycles) {
+        this.maxCycles = maxCycles;
+    }
+
+    public void runOS() {
         ioModule.start();
         processor.start();
         startTime = System.currentTimeMillis();
@@ -145,7 +120,7 @@ public class OperatingSystem {
                 printStatus();
             }
             elapsedCycles++;
-            sleep();
+            sleep(CYCLE_DELAY_MS);
         }
         ioModule.stop();
         processor.stop();
@@ -177,9 +152,9 @@ public class OperatingSystem {
         System.out.println("---------------------------------------------------------------");
     }
 
-    private void sleep() {
+    private void sleep(int milliseconds) {
         try {
-            TimeUnit.MILLISECONDS.sleep(CYCLE_DELAY_MS);
+            TimeUnit.MILLISECONDS.sleep(milliseconds);
         } catch (InterruptedException ignored) {}
     }
 
@@ -343,7 +318,7 @@ public class OperatingSystem {
         // Simulates the use of CPU cycle time to handle an I/O interrupt
         void handleInterrupt() {
             interrupt = false;
-            sleep();
+            sleep(CYCLE_DELAY_MS);
         }
 
         // Provides a 1 in 16 chance of generating an I/O interrupt
