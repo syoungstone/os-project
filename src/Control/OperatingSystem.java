@@ -31,6 +31,7 @@ public class OperatingSystem {
     private long maxCycles;
     private long elapsedCycles;
     private long startTime = 0;
+    private long elapsedTime = 0;
     private final Map<Integer, PCB> processes;
     private final List<PCB> terminated;
     private final Set<Integer> waitingOnIo;
@@ -40,6 +41,8 @@ public class OperatingSystem {
     private final PidGenerator pidGenerator;
 
     private TaskManager taskManager;
+
+    private boolean halt = false;
 
     private OperatingSystem() {
         processor = new Processor();
@@ -96,7 +99,7 @@ public class OperatingSystem {
         for (PCB p : processes.values()) {
             p.setStartTime(startTime);
         }
-        while (processes.size() > 0 && elapsedCycles < maxCycles) {
+        while (processes.size() > 0 && elapsedCycles < maxCycles && !halt) {
             for (Map.Entry<Integer,int[]> entry : waitingOnResources.entrySet()) {
                 int pid = entry.getKey();
                 int[] resourceRequest = entry.getValue();
@@ -117,10 +120,16 @@ public class OperatingSystem {
                 sendStatus();
             }
             elapsedCycles++;
-            sleep(CYCLE_DELAY_MS);
+            sleep();
         }
+        sendStatus();
         ioModule.stop();
         processor.stop();
+        long haltTime = System.currentTimeMillis();
+        elapsedTime += haltTime - startTime;
+        for (PCB p : processes.values()) {
+            p.setHaltTime(haltTime);
+        }
         if (processes.size() == 0) {
             taskManager.setCompleted();
         } else {
@@ -136,7 +145,7 @@ public class OperatingSystem {
                         .sorted(Comparator.comparingInt(PCB::getPid))
                         .collect(Collectors.toList());
 
-        long elapsedMs = System.currentTimeMillis() - startTime;
+        long elapsedMs = elapsedTime + System.currentTimeMillis() - startTime;
         int waitingOnCritical = semaphores.stream().mapToInt(Semaphore::getWaitingCount).sum();
 
         // System.out.println("PIDs of processes in CPU: " + processor.getCurrentPids());
@@ -155,9 +164,19 @@ public class OperatingSystem {
         );
     }
 
-    private void sleep(int milliseconds) {
+    public void halt() {
+        halt = true;
+    }
+
+    public void resume() {
+        maxCycles = Long.MAX_VALUE;
+        halt = false;
+        runOS();
+    }
+
+    private void sleep() {
         try {
-            TimeUnit.MILLISECONDS.sleep(milliseconds);
+            TimeUnit.MILLISECONDS.sleep(CYCLE_DELAY_MS);
         } catch (InterruptedException ignored) {}
     }
 
@@ -321,7 +340,7 @@ public class OperatingSystem {
         // Simulates the use of CPU cycle time to handle an I/O interrupt
         void handleInterrupt() {
             interrupt = false;
-            sleep(CYCLE_DELAY_MS);
+            sleep();
         }
 
         // Provides a 1 in 16 chance of generating an I/O interrupt

@@ -276,16 +276,19 @@ public class TaskManager extends Application {
         hbox.getChildren().addAll(status, processes, processorStats);
 
         btToggleExecution = new Button("Halt Execution");
-        btToggleExecution.setOnAction((event) -> {            if (halted) {
+        btToggleExecution.setOnAction((event) -> {
+            if (halted) {
                 halted = false;
                 btToggleExecution.setText("Halt Execution");
                 statusLabel.setText("OS is running");
-                // OperatingSystem.getInstance().resume();
+                OperatingSystem os = OperatingSystem.getInstance();
+                Thread thread = new Thread(os::resume);
+                thread.start();
             } else {
                 halted = true;
                 btToggleExecution.setText("Resume Execution");
                 statusLabel.setText("OS halted by user");
-                // OperatingSystem.getInstance().halt();
+                OperatingSystem.getInstance().halt();
             }
         });
 
@@ -357,23 +360,19 @@ public class TaskManager extends Application {
 
     public void setHalted() {
         Platform.runLater(() -> {
-            halted = true;
-            statusLabel.setText("OS halted, max cycles reached");
+            if (!halted) {
+                halted = true;
+                statusLabel.setText("OS halted, max cycles reached");
+            }
             btToggleExecution.setText("Resume Execution");
         });
     }
 
     public void setCompleted() {
         Platform.runLater(() -> {
-            FlowPane runningPane = new FlowPane(Orientation.VERTICAL);
-            runningPane.setAlignment(Pos.CENTER);
-            runningPane.setVgap(20);
-
-            Label completedLabel = new Label("All processes terminated. Goodbye!");
-
-            runningPane.getChildren().addAll(completedLabel);
-
-            stage.setScene(new Scene(runningPane, INITIAL_SCENE_WIDTH, INITIAL_SCENE_HEIGHT));
+            halted = true;
+            statusLabel.setText("OS completed, all processes terminated");
+            btToggleExecution.setVisible(false);
         });
     }
 

@@ -18,6 +18,7 @@ public class PCB implements Comparable<PCB> {
     private final IPCStandard ipcStandard;
 
     private long startTime = 0;
+    private long elapsedTime = 0;
     private long currentWaitStartTime = 0;
     private long waitingTime = 0;
 
@@ -118,12 +119,16 @@ public class PCB implements Comparable<PCB> {
         }
     }
 
+    public void setHaltTime(long haltTime) {
+        elapsedTime += haltTime - startTime;
+    }
+
     public String getTemplateName() {
         return template.name();
     }
 
     public long getTurnaroundTime() {
-        return System.currentTimeMillis() - startTime;
+        return elapsedTime + System.currentTimeMillis() - startTime;
     }
 
     public long getWaitingTime() {
