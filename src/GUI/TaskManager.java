@@ -1,8 +1,11 @@
 package GUI;
 
 import Control.OperatingSystem;
+import Processes.PCB;
+import Processes.Priority;
 import Processes.Template;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -23,7 +26,13 @@ import java.util.List;
 public class TaskManager extends Application {
 
     private final int SCENE_WIDTH = 500;
-    private final int SCENE_HEIGHT = 400;
+    private final int SCENE_HEIGHT = 600;
+
+    private boolean halted;
+    private Label statusLabel;
+    private Label numCyclesLabel;
+    private Button btToggleExecution;
+    private GridPane processPane;
 
     private Stage stage;
 
@@ -121,9 +130,9 @@ public class TaskManager extends Application {
                 int numCycles = Integer.parseInt(textField.getCharacters().toString());
                 OperatingSystem os = OperatingSystem.getInstance();
                 os.setMaxCycles(numCycles);
+                stage.setScene(getRunningScene());
                 Thread thread = new Thread(os::runOS);
                 thread.start();
-                stage.setScene(getRunningScene());
             } catch (NumberFormatException e) {
                 errorLabel.setVisible(true);
             }
@@ -135,9 +144,9 @@ public class TaskManager extends Application {
         btNoLimit.setOnAction((event) -> {
             OperatingSystem os = OperatingSystem.getInstance();
             os.setMaxCycles(Long.MAX_VALUE);
+            stage.setScene(getRunningScene());
             Thread thread = new Thread(os::runOS);
             thread.start();
-            stage.setScene(getRunningScene());
         });
 
         FlowPane cyclesPane = new FlowPane(Orientation.VERTICAL);
@@ -151,12 +160,112 @@ public class TaskManager extends Application {
 
     private Scene getRunningScene() {
 
-        Label runningLabel = new Label("OS now running...");
+        halted = false;
 
-        Pane runningPane = new StackPane();
-        runningPane.getChildren().add(runningLabel);
+        FlowPane runningPane = new FlowPane(Orientation.VERTICAL);
+        runningPane.setAlignment(Pos.CENTER);
+        runningPane.setVgap(20);
+        runningPane.setColumnHalignment(HPos.CENTER);
+
+        Label statsLabel = new Label("Operating System Stats:");
+
+        GridPane statsPane = new GridPane();
+        statsPane.setAlignment(Pos.CENTER);
+        statsPane.setHgap(10);
+        statsPane.setVgap(10);
+
+        Label statusHeaderLabel = new Label("STATUS");
+        Label numCyclesHeaderLabel = new Label("ELAPSED CYCLES");
+        statusLabel = new Label("OS is running");
+        numCyclesLabel = new Label("0");
+
+        statsPane.add(statusHeaderLabel, 0, 0);
+        statsPane.add(statusLabel, 1, 0);
+        statsPane.add(numCyclesHeaderLabel, 0, 1);
+        statsPane.add(numCyclesLabel, 1, 1);
+
+        GridPane.setHalignment(statusHeaderLabel, HPos.RIGHT);
+        GridPane.setHalignment(numCyclesHeaderLabel, HPos.RIGHT);
+
+        Label processesLabel = new Label("Currently Executing Processes:");
+
+        processPane = new GridPane();
+        processPane.setAlignment(Pos.CENTER);
+        processPane.setHgap(10);
+        processPane.setVgap(10);
+
+        btToggleExecution = new Button("Halt Execution");
+        btToggleExecution.setOnAction((event) -> {
+            if (halted) {
+                halted = false;
+                btToggleExecution.setText("Halt Execution");
+                statusLabel.setText("OS is running");
+                // OperatingSystem.getInstance().resume();
+            } else {
+                halted = true;
+                btToggleExecution.setText("Resume Execution");
+                statusLabel.setText("OS halted by user");
+                // OperatingSystem.getInstance().halt();
+            }
+        });
+
+        runningPane.getChildren().addAll(statsLabel, statsPane, processesLabel, processPane, btToggleExecution);
 
         return new Scene(runningPane, SCENE_WIDTH, SCENE_HEIGHT);
+    }
+
+    public void updateRunningScene(List<PCB> runningProcesses, long elapsedCycles) {
+        Platform.runLater(() -> {
+            numCyclesLabel.setText(Long.toString(elapsedCycles));
+            processPane.getChildren().clear();
+            processPane.add(new Label("PID"), 0, 0);
+            processPane.add(new Label("Priority"), 1, 0);
+            processPane.add(new Label("Template File Name"), 2, 0);
+            if (runningProcesses.size() > 0) {
+                for (int i = 0; i < runningProcesses.size(); i++) {
+                    PCB p = runningProcesses.get(i);
+                    processPane.add(new Label(Integer.toString(p.getPid())), 0, i + 1);
+                    Priority priority = p.getPriority();
+                    String priorityString;
+                    if (priority == Priority.HIGH) {
+                        priorityString = "HIGH";
+                    } else if (priority == Priority.MEDIUM) {
+                        priorityString = "MEDIUM";
+                    } else {
+                        priorityString = "LOW";
+                    }
+                    processPane.add(new Label(priorityString), 1, i + 1);
+                    processPane.add(new Label(p.getTemplateName()), 2, i + 1);
+                }
+            }
+            for (int i = runningProcesses.size() ; i < 8 ; i++) {
+                processPane.add(new Label("---"), 0, i + 1);
+                processPane.add(new Label("---"), 1, i + 1);
+                processPane.add(new Label("---"), 2, i + 1);
+            }
+        });
+    }
+
+    public void setHalted() {
+        Platform.runLater(() -> {
+            halted = true;
+            statusLabel.setText("OS halted, max cycles reached");
+            btToggleExecution.setText("Resume Execution");
+        });
+    }
+
+    public void setCompleted() {
+        Platform.runLater(() -> {
+            FlowPane runningPane = new FlowPane(Orientation.VERTICAL);
+            runningPane.setAlignment(Pos.CENTER);
+            runningPane.setVgap(20);
+
+            Label completedLabel = new Label("All processes terminated. Goodbye!");
+
+            runningPane.getChildren().addAll(completedLabel);
+
+            stage.setScene(new Scene(runningPane, SCENE_WIDTH, SCENE_HEIGHT));
+        });
     }
 
 }

@@ -118,6 +118,10 @@ public class PCB implements Comparable<PCB> {
         }
     }
 
+    public String getTemplateName() {
+        return template.name();
+    }
+
     public long getTurnaroundTime() {
         return System.currentTimeMillis() - startTime;
     }

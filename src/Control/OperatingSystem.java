@@ -6,15 +6,14 @@ import Memory.MainMemory;
 import Memory.Page;
 import Memory.VirtualMemory;
 import Memory.Word;
-import Processes.MalformedTemplateException;
-import Processes.PCB;
+import Processes.*;
 import Processes.Process;
-import Processes.Template;
 import Processor.Processor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class OperatingSystem {
 
@@ -118,6 +117,13 @@ public class OperatingSystem {
             }
             if (elapsedCycles % CYCLES_PER_STATUS_PRINTOUT == 0) {
                 printStatus();
+                // Get all running processes sorted by PID
+                List<PCB> runningProcesses =
+                        processes.values().stream()
+                                .filter(pcb -> pcb.getState() == State.RUN)
+                                .sorted(Comparator.comparingInt(PCB::getPid))
+                                .collect(Collectors.toList());
+                taskManager.updateRunningScene(runningProcesses, elapsedCycles);
             }
             elapsedCycles++;
             sleep(CYCLE_DELAY_MS);
@@ -125,9 +131,9 @@ public class OperatingSystem {
         ioModule.stop();
         processor.stop();
         if (processes.size() == 0) {
-            System.out.println("\nAll processes terminated. Goodbye!");
+            taskManager.setCompleted();
         } else {
-            System.out.println("\nTotal cycles elapsed has reached the maximum amount of " + maxCycles + ". Halting.");
+            taskManager.setHalted();
         }
         processor.printStatistics();
     }
