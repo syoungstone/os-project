@@ -26,7 +26,7 @@ public class TaskManager extends Application {
     private final int INITIAL_SCENE_HEIGHT = 300;
 
     private final int RUNNING_SCENE_WIDTH = 800;
-    private final int RUNNING_SCENE_HEIGHT = 600;
+    private final int RUNNING_SCENE_HEIGHT = 550;
 
     private boolean halted;
     private Label statusLabel;
@@ -38,6 +38,7 @@ public class TaskManager extends Application {
     private Label resourcesLabel;
     private Label criticalLabel;
     private Label terminatedLabel;
+    private Label processorStatsLabel;
     private Button btToggleExecution;
     private GridPane processPane;
 
@@ -251,6 +252,10 @@ public class TaskManager extends Application {
         processPane.setHgap(10);
         processPane.setVgap(10);
 
+        Label processorStatsHeaderLabel = new Label("CPU Statistics:");
+        processorStatsHeaderLabel.setStyle("-fx-font-size: 18");
+        processorStatsLabel = new Label();
+
         VBox status = new VBox();
         status.setSpacing(10);
         status.setAlignment(Pos.TOP_RIGHT);
@@ -258,17 +263,20 @@ public class TaskManager extends Application {
 
         VBox processes = new VBox();
         processes.setSpacing(10);
-        processes.setAlignment(Pos.TOP_LEFT);
+        processes.setAlignment(Pos.TOP_CENTER);
         processes.getChildren().addAll(processesLabel, processPane);
+
+        VBox processorStats = new VBox();
+        processorStats.setSpacing(10);
+        processorStats.getChildren().addAll(processorStatsHeaderLabel, processorStatsLabel);
 
         HBox hbox = new HBox();
         hbox.setAlignment(Pos.TOP_CENTER);
         hbox.setSpacing(50);
-        hbox.getChildren().addAll(status, processes);
+        hbox.getChildren().addAll(status, processes, processorStats);
 
         btToggleExecution = new Button("Halt Execution");
-        btToggleExecution.setOnAction((event) -> {
-            if (halted) {
+        btToggleExecution.setOnAction((event) -> {            if (halted) {
                 halted = false;
                 btToggleExecution.setText("Halt Execution");
                 statusLabel.setText("OS is running");
@@ -295,7 +303,8 @@ public class TaskManager extends Application {
             int numIo,
             int numResources,
             int numCritical,
-            int numTerminated
+            int numTerminated,
+            String processorStats
     ) {
         Platform.runLater(() -> {
 
@@ -312,6 +321,7 @@ public class TaskManager extends Application {
             resourcesLabel.setText(Integer.toString(numResources));
             criticalLabel.setText(Integer.toString(numCritical));
             terminatedLabel.setText(Integer.toString(numTerminated));
+            processorStatsLabel.setText(processorStats);
 
             processPane.getChildren().clear();
             processPane.add(new Label("PID"), 0, 0);

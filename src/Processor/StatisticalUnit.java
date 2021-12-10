@@ -5,8 +5,11 @@ import Processes.PCB;
 // Used by the Core class to measure scheduler performance
 public class StatisticalUnit {
 
+    private boolean running = false;
+
+    private long totalRunTime = 0;
+
     private long startTime = 0;
-    private long endTime = 0;
 
     private int completedProcesses = 0;
 
@@ -17,11 +20,13 @@ public class StatisticalUnit {
     private int totalCycles = 0;
 
     public void start() {
+        running = true;
         startTime = System.currentTimeMillis();
     }
 
     public void stop() {
-        endTime = System.currentTimeMillis();
+        running = false;
+        totalRunTime += (System.currentTimeMillis() - startTime);
     }
 
     public synchronized void incrementUtilizedCycles() {
@@ -38,7 +43,7 @@ public class StatisticalUnit {
         totalWaitingTime += p.getWaitingTime();
     }
 
-    public double getUtilization() {
+    public synchronized double getUtilization() {
         // Prevent division by 0
         if (totalCycles == 0) {
             return 0;
@@ -46,8 +51,13 @@ public class StatisticalUnit {
         return (double) utilizedCycles / totalCycles;
     }
 
-    public double getThroughput() {
-        double secondsElapsed = (double) (endTime - startTime) / 1000;
+    public synchronized double getThroughput() {
+        double secondsElapsed;
+        if (running) {
+            secondsElapsed = (double) (totalRunTime + System.currentTimeMillis() - startTime) / 1000;
+        } else {
+            secondsElapsed = (double) totalRunTime / 1000;
+        }
         // Prevent division by 0
         if (secondsElapsed == 0) {
             return 0;
@@ -55,7 +65,7 @@ public class StatisticalUnit {
         return (double) completedProcesses / secondsElapsed;
     }
 
-    public double getAvgTurnaroundTime() {
+    public synchronized double getAvgTurnaroundTime() {
         // Prevent division by 0
         if (completedProcesses == 0) {
             return 0;
@@ -63,7 +73,7 @@ public class StatisticalUnit {
         return (double) totalTurnaroundTime / completedProcesses;
     }
 
-    public double getAvgWaitingTime() {
+    public synchronized double getAvgWaitingTime() {
         // Prevent division by 0
         if (completedProcesses == 0) {
             return 0;

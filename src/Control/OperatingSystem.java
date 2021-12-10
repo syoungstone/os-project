@@ -62,8 +62,6 @@ public class OperatingSystem {
 
         this.taskManager = taskManager;
 
-        sleep(1000);
-
         try {
             List<Template> templates = Template.getTemplates();
             // Create one critical section semaphore for each template
@@ -128,7 +126,6 @@ public class OperatingSystem {
         } else {
             taskManager.setHalted();
         }
-        processor.printStatistics();
     }
 
     private void sendStatus() {
@@ -153,7 +150,8 @@ public class OperatingSystem {
                 waitingOnIo.size(),
                 waitingOnResources.size(),
                 waitingOnCritical,
-                terminated.size()
+                terminated.size(),
+                processor.getStatistics()
         );
     }
 

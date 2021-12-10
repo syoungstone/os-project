@@ -80,15 +80,15 @@ public class Core {
         return pids.toString();
     }
 
-    public void printStatistics() {
+    public String getStatistics() {
         String utilization = String.format("%.2f", (statisticalUnit.getUtilization() * 100));
         String throughput = String.format("%.2f", statisticalUnit.getThroughput());
         String turnaround = String.format("%.2f", statisticalUnit.getAvgTurnaroundTime());
         String waiting = String.format("%.2f", statisticalUnit.getAvgWaitingTime());
-        System.out.println("\t\tCPU Utilization: " + utilization + "%");
-        System.out.println("\t\tThroughput: " + throughput + " processes/second");
-        System.out.println("\t\tAverage Turnaround Time: " + turnaround + " ms");
-        System.out.println("\t\tAverage Waiting Time: " + waiting + " ms");
+        return "\n\n\tUtilization: " + utilization + "%" +
+                "\n\tThroughput: " + throughput + " processes/second" +
+                "\n\tAvg Turnaround Time: " + turnaround + " ms" +
+                "\n\tAvg Waiting Time: " + waiting + " ms";
     }
 
     private class HardwareThread {

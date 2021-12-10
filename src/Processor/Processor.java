@@ -61,12 +61,9 @@ public class Processor {
         return core1.getReadyCount() + core2.getReadyCount();
     }
 
-    public void printStatistics() {
-        System.out.println("\nComparison of core performance:");
-        System.out.println("\n\tCore 1: " + core1.getSchedulerName());
-        core1.printStatistics();
-        System.out.println("\n\tCore 2: " + core2.getSchedulerName());
-        core2.printStatistics();
+    public String getStatistics() {
+        return "Core 1: " + core1.getSchedulerName() + core1.getStatistics() +
+                "\n\nCore 2: " + core2.getSchedulerName() + core2.getStatistics();
     }
 
 
