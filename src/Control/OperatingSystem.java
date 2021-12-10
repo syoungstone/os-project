@@ -116,14 +116,7 @@ public class OperatingSystem {
                 ioModule.handleInterrupt();
             }
             if (elapsedCycles % CYCLES_PER_STATUS_PRINTOUT == 0) {
-                printStatus();
-                // Get all running processes sorted by PID
-                List<PCB> runningProcesses =
-                        processes.values().stream()
-                                .filter(pcb -> pcb.getState() == State.RUN)
-                                .sorted(Comparator.comparingInt(PCB::getPid))
-                                .collect(Collectors.toList());
-                taskManager.updateRunningScene(runningProcesses, elapsedCycles);
+                sendStatus();
             }
             elapsedCycles++;
             sleep(CYCLE_DELAY_MS);
@@ -138,24 +131,30 @@ public class OperatingSystem {
         processor.printStatistics();
     }
 
-    private void printStatus() {
-        System.out.println("\n-------------------------STATUS REPORT-------------------------");
-        long msElapsed = System.currentTimeMillis() - startTime;
-        int minutesElapsed = (int) (msElapsed / (1000 * 60));
-        int secondsElapsed = (int) ((msElapsed % (1000 * 60)) / (1000));
-        int millisecondsElapsed = (int) (msElapsed % 1000);
-        System.out.print("Time since startup: " + minutesElapsed + " min, " + secondsElapsed + " sec, ");
-        System.out.println(millisecondsElapsed + " ms");
-        System.out.println("Cycles elapsed: " + elapsedCycles);
-        System.out.println("PIDs of processes in CPU: " + processor.getCurrentPids());
-        System.out.println("Total processes running: " + processes.size());
-        System.out.println("Total processes in ready queue: " + processor.getReadyCount());
-        System.out.println("Total processes executing I/O cycles: " + waitingOnIo.size());
-        System.out.println("Total processes waiting on resources: " + waitingOnResources.size());
-        System.out.println("Total processes waiting on critical section: "
-                + semaphores.stream().mapToInt(Semaphore::getWaitingCount).sum());
-        System.out.println("Total processes terminated: " + terminated.size());
-        System.out.println("---------------------------------------------------------------");
+    private void sendStatus() {
+        // Get all running processes sorted by PID
+        List<PCB> executingProcesses =
+                processes.values().stream()
+                        .filter(pcb -> pcb.getState() == State.RUN)
+                        .sorted(Comparator.comparingInt(PCB::getPid))
+                        .collect(Collectors.toList());
+
+        long elapsedMs = System.currentTimeMillis() - startTime;
+        int waitingOnCritical = semaphores.stream().mapToInt(Semaphore::getWaitingCount).sum();
+
+        // System.out.println("PIDs of processes in CPU: " + processor.getCurrentPids());
+
+        taskManager.updateRunningScene(
+                executingProcesses,
+                elapsedMs,
+                elapsedCycles,
+                processes.size(),
+                processor.getReadyCount(),
+                waitingOnIo.size(),
+                waitingOnResources.size(),
+                waitingOnCritical,
+                terminated.size()
+        );
     }
 
     private void sleep(int milliseconds) {
