@@ -1,7 +1,6 @@
 package Scheduling;
 
 import Processes.PCB;
-import Scheduling.ShortTermScheduler;
 
 import java.util.LinkedList;
 import java.util.Queue;

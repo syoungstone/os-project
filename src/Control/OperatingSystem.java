@@ -4,7 +4,6 @@ import Communication.IPCStandard;
 import GUI.TaskManager;
 import Memory.MainMemory;
 import Memory.Page;
-import Memory.VirtualMemory;
 import Memory.Word;
 import Processes.*;
 import Processes.Process;
@@ -26,7 +25,6 @@ public class OperatingSystem {
     private final Processor processor;
     private final IoModule ioModule;
     private final MainMemory mainMemory;
-    private final VirtualMemory virtualMemory;
 
     private long maxCycles;
     private long elapsedCycles;
@@ -48,7 +46,6 @@ public class OperatingSystem {
         processor = new Processor();
         ioModule = new IoModule();
         mainMemory = MainMemory.getInstance();
-        virtualMemory = VirtualMemory.getInstance();
 
         elapsedCycles = 0;
         // ConcurrentHashMap class & Collections.synchronized methods for thread safety
@@ -147,8 +144,6 @@ public class OperatingSystem {
 
         long elapsedMs = elapsedTime + System.currentTimeMillis() - startTime;
         int waitingOnCritical = semaphores.stream().mapToInt(Semaphore::getWaitingCount).sum();
-
-        // System.out.println("PIDs of processes in CPU: " + processor.getCurrentPids());
 
         taskManager.updateRunningScene(
                 executingProcesses,

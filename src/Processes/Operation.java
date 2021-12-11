@@ -18,7 +18,7 @@ public enum Operation {
         }
     }
 
-    private Operation(String string) {
+    Operation(String string) {
         this.string = string;
     }
 
