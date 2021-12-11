@@ -69,7 +69,7 @@ public class Core {
         return shortTermScheduler.getReadyCount();
     }
 
-    public String getCurrentPids() {
+    private String getCurrentPids() {
         StringBuilder pids = new StringBuilder();
         for (int i = 0; i < hardwareThreads.length ; i++) {
             pids.append(hardwareThreads[i].getCurrentPid());
@@ -85,7 +85,8 @@ public class Core {
         String throughput = String.format("%.2f", statisticalUnit.getThroughput());
         String turnaround = String.format("%.2f", statisticalUnit.getAvgTurnaroundTime());
         String waiting = String.format("%.2f", statisticalUnit.getAvgWaitingTime());
-        return "\n\n\tUtilization: " + utilization + "%" +
+        return "\n\n\tCurrent Processes: " + getCurrentPids() +
+                "\n\tUtilization: " + utilization + "%" +
                 "\n\tThroughput: " + throughput + " processes/second" +
                 "\n\tAvg Turnaround Time: " + turnaround + " ms" +
                 "\n\tAvg Waiting Time: " + waiting + " ms";

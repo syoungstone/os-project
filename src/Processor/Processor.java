@@ -53,10 +53,6 @@ public class Processor {
         return core1.cycleFinished() && core2.cycleFinished();
     }
 
-    public String getCurrentPids() {
-        return "\n\tCore 1: " + core1.getCurrentPids() + "\n\tCore 2: " + core2.getCurrentPids();
-    }
-
     public int getReadyCount() {
         return core1.getReadyCount() + core2.getReadyCount();
     }

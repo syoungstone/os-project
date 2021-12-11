@@ -367,16 +367,24 @@ public class PCB implements Comparable<PCB> {
     private void requestResource() {
         if (currentOpSet.getOperation() == Operation.CALCULATE
                 || currentOpSet.getOperation() == Operation.FORK) {
-            // Possibility of needing to acquire more resources before proceeding
-            Random random = new Random();
-            int[] resourceRequest = new int[ResourceManager.NUM_RESOURCE_TYPES];
-            if (random.nextInt(RESOURCE_REQUEST_RANDOM_BOUND) == 0) {
+            // Possibility of needing to acquire or release resources before proceeding
+            int randInt = new Random().nextInt(RESOURCE_REQUEST_RANDOM_BOUND);
+            if (randInt == 0) {
+                // Acquire new resources
+                int[] resourceRequest = new int[ResourceManager.NUM_RESOURCE_TYPES];
                 for (int i = 0 ; i < ResourceManager.NUM_RESOURCE_TYPES ; i++) {
-                    resourceRequest[i] = random.nextInt(maxResources[i] - currentResources[i] + 1);
+                    resourceRequest[i] = new Random().nextInt(maxResources[i] - currentResources[i] + 1);
                 }
                 OperatingSystem.getInstance().requestResources(pid, resourceRequest);
+            } else if (randInt == 1) {
+                // Release existing resources
+                int[] releasing = new int[ResourceManager.NUM_RESOURCE_TYPES];
+                for (int i = 0 ; i < ResourceManager.NUM_RESOURCE_TYPES ; i++) {
+                    releasing[i] = new Random().nextInt(currentResources[i] + 1);
+                }
+                OperatingSystem.getInstance().releaseResources(pid, releasing);
             } else {
-                necessaryResourcesAcquired(resourceRequest);
+                requestCPU();
             }
         } else if (currentOpSet.getOperation() == Operation.IO) {
             state = State.WAIT;
@@ -389,6 +397,10 @@ public class PCB implements Comparable<PCB> {
         for (int i = 0 ; i < ResourceManager.NUM_RESOURCE_TYPES ; i++) {
             currentResources[i] += resourceRequest[i];
         }
+        requestCPU();
+    }
+
+    private void requestCPU() {
         state = State.READY;
         currentWaitStartTime = System.currentTimeMillis();
         OperatingSystem.getInstance().requestCPU(this);

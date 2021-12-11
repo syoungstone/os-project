@@ -248,6 +248,10 @@ public class OperatingSystem {
         }
     }
 
+    public void releaseResources(int pid, int[] releasing) {
+        ResourceManager.getInstance().releaseResources(pid, releasing);
+    }
+
     public void removeFromSemaphore(int pid, int index) {
         semaphores.get(index).removeFromQueue(pid);
     }
