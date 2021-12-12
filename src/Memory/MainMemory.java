@@ -41,6 +41,7 @@ public class MainMemory {
         int framesAvailable = freeFrameList.size();
         List<Page> pages = new ArrayList<>();
 
+        // Allocate available frames
         if (framesAvailable > 0) {
             for (int i = 0 ; i < framesAvailable ; i++) {
                 int frameNumber = freeFrameList.remove();
@@ -53,10 +54,13 @@ public class MainMemory {
             }
         }
 
+        // If not enough available frames, additional Pages created in VirtualMemory
         if (pagesRequired - framesAvailable > 0) {
             for (int i = 0 ; i < pagesRequired - framesAvailable ; i++) {
                 int startAddress = i * Page.getSizeBytes();
-                pages.add(new Page(startAddress));
+                Page page = new Page(startAddress);
+                VirtualMemory.getInstance().storePage(page);
+                pages.add(page);
             }
         }
 

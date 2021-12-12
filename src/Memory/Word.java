@@ -7,6 +7,7 @@ public class Word {
 
     private Byte[] bytes;
 
+    // Reading a word from a single location
     Word(int physicalAddress) {
         bytes = new Byte[WORD_SIZE_IN_BYTES];
         for (int i = 0 ; i < WORD_SIZE_IN_BYTES ; i++) {
@@ -15,6 +16,7 @@ public class Word {
         }
     }
 
+    // Reading a word with bytes in two locations because of a page break
     Word(int physicalAddress1, int sizeFirstChunk, int physicalAddress2) {
         bytes = new Byte[WORD_SIZE_IN_BYTES];
         for (int i = 0 ; i < sizeFirstChunk ; i++) {

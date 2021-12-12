@@ -129,6 +129,7 @@ public class Core {
                 boolean run = true;
                 while (run) {
                     try {
+                        // Wait until start of new cycle is signaled
                         synchronized (threadCoordinator) {
                             threadCoordinator.wait();
                         }

@@ -62,7 +62,7 @@ public class Processor {
                 "\n\nCore 2: " + core2.getSchedulerName() + core2.getStatistics();
     }
 
-
+    // Used to track which Core a PCB is assigned to
     public enum CoreId {
         CORE1, CORE2
     }
